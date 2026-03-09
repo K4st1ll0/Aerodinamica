@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, Any
-
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 import trimesh
 
@@ -295,3 +296,136 @@ if __name__ == "__main__":
 
     print("\nPrimeras 5 normales:")
     print(geom["normals"][:5])
+
+def plot_geom(
+    geom: dict,
+    show_mesh: bool = True,
+    show_centers: bool = True,
+    show_normals: bool = False,
+    normal_scale: float = 10.0,
+    color_by: str | None = None,
+    alpha: float = 0.7,
+    edgecolor: str = "k",
+    linewidth: float = 0.3,
+    title: str = "Mesh visualization",
+):
+    """
+    Visualiza la geometría a partir del diccionario geom.
+
+    Parameters
+    ----------
+    geom : dict
+        Salida de compute_face_geometry(mesh), con:
+        - face_vertices : (M, 3, 3)
+        - centers       : (M, 3)
+        - areas         : (M,)
+        - normals       : (M, 3)
+    show_mesh : bool
+        Si True, pinta los triángulos.
+    show_centers : bool
+        Si True, pinta los centroides.
+    show_normals : bool
+        Si True, pinta las normales.
+    normal_scale : float
+        Escala visual de las flechas de normales.
+    color_by : str | None
+        Puede ser:
+        - None   -> color uniforme
+        - "area" -> colorea por área
+    alpha : float
+        Transparencia de la malla.
+    """
+
+    face_vertices = geom["face_vertices"]
+    centers = geom["centers"]
+    areas = geom["areas"]
+    normals = geom["normals"]
+
+    fig = plt.figure(figsize=(9, 8))
+    ax = fig.add_subplot(111, projection="3d")
+
+    # -------------------------
+    # Colores por cara
+    # -------------------------
+    if color_by is None:
+        facecolors = "lightblue"
+    elif color_by == "area":
+        a_min = np.min(areas)
+        a_max = np.max(areas)
+        if np.isclose(a_max, a_min):
+            values = np.zeros_like(areas)
+        else:
+            values = (areas - a_min) / (a_max - a_min)
+        cmap = plt.cm.viridis
+        facecolors = cmap(values)
+    else:
+        raise ValueError(f"color_by='{color_by}' no soportado")
+
+    # -------------------------
+    # Malla
+    # -------------------------
+    if show_mesh:
+        poly = Poly3DCollection(
+            face_vertices,
+            facecolors=facecolors,
+            edgecolors=edgecolor,
+            linewidths=linewidth,
+            alpha=alpha,
+        )
+        ax.add_collection3d(poly)
+
+    # -------------------------
+    # Centros
+    # -------------------------
+    if show_centers:
+        ax.scatter(
+            centers[:, 0],
+            centers[:, 1],
+            centers[:, 2],
+            s=8,
+            label="Centers",
+        )
+
+    # -------------------------
+    # Normales
+    # -------------------------
+    if show_normals:
+        ax.quiver(
+            centers[:, 0],
+            centers[:, 1],
+            centers[:, 2],
+            normals[:, 0],
+            normals[:, 1],
+            normals[:, 2],
+            length=normal_scale,
+            normalize=True,
+        )
+
+    # -------------------------
+    # Ajuste de ejes
+    # -------------------------
+    all_pts = face_vertices.reshape(-1, 3)
+    x = all_pts[:, 0]
+    y = all_pts[:, 1]
+    z = all_pts[:, 2]
+
+    xmid = 0.5 * (x.min() + x.max())
+    ymid = 0.5 * (y.min() + y.max())
+    zmid = 0.5 * (z.min() + z.max())
+
+    max_range = 0.5 * max(x.max() - x.min(), y.max() - y.min(), z.max() - z.min())
+
+    ax.set_xlim(xmid - max_range, xmid + max_range)
+    ax.set_ylim(ymid - max_range, ymid + max_range)
+    ax.set_zlim(zmid - max_range, zmid + max_range)
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    ax.set_title(title)
+
+    if show_centers:
+        ax.legend()
+
+    plt.tight_layout()
+    plt.show()
