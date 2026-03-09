@@ -4,7 +4,7 @@ from stl_utils import plot_geom
 from newton_solver import solve_newton_case
 import numpy as np
 
-mesh = load_stl(Path("../data/esfera.stl"))
+mesh = load_stl(Path("data/esfera.stl"))
 print_mesh_summary(mesh)
 
 geom = compute_face_geometry(mesh)

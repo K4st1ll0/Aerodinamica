@@ -213,7 +213,7 @@ def compute_face_geometry(mesh: trimesh.Trimesh) -> Dict[str, np.ndarray]:
     face_vertices = get_face_vertices(mesh)
     centers = compute_face_centers(mesh)
     areas = compute_face_areas(mesh)
-    normals = compute_face_normals(mesh)
+    normals = compute_face_normals(mesh, fix_orientation=True)
 
     return {
         "face_vertices": face_vertices,
