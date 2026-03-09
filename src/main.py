@@ -4,7 +4,12 @@ from stl_utils import plot_geom
 from newton_solver import solve_newton_case
 import numpy as np
 
-mesh = load_stl(Path("data/esfera.stl"))
+# mesh = load_stl(Path("data/esfera.stl"))           # Esfera Moodle
+# mesh = load_stl(Path("data/Capsula/PruebaARD.stl"))  # Prueba STL1 SAG-50mm
+# mesh = load_stl(Path("data/Capsula/PruebaARD2.stl"))  # Prueba STL2 SAG-0.01mm, Step 1 mm(?) argo asi. 400000 triángulos, no recomendable para flojos.
+# mesh = load_stl(Path("data/Capsula/PruebaARD3.stl"))  # Prueba STL1 SAG-15mm step-100mm
+mesh = load_stl(Path("data/Capsula/PruebaARD4.stl"))  # Prueba STL1 SAG-15mm step-100mm con mesh smoothing
+
 print_mesh_summary(mesh)
 
 geom = compute_face_geometry(mesh)
@@ -47,18 +52,13 @@ result = solve_newton_case(
 # ============================================================
 # RESULTADOS BÁSICOS
 # ============================================================
-CF = result["CF_total"]
-CM = result["CM_total"]
-
 print("\n=== RESULTADOS NEWTON ===")
 print(f"alpha_deg = {result['alpha_deg']}")
+print(f"CF_total  = {result['CF_total']}")
+print(f"CM_total  = {result['CM_total']}")
 
-print(f"CF_total_x = {CF[0]}")
-print(f"CF_total_y = {CF[1]}")
-print(f"CF_total_z = {CF[2]}")
+print("\nPrimeros 10 valores de cp:")
+print(result["cp"][:10])
 
-print(f"CM_total_x = {CM[0]}")
-print(f"CM_total_y = {CM[1]}")
-print(f"CM_total_z = {CM[2]}")
 print("\nNúmero de caras a barlovento:", np.sum(result["mu"] > 0.0))
 print("Número de caras a sotavento :", np.sum(result["mu"] <= 0.0))
