@@ -24,7 +24,7 @@ plot_geom(
     show_mesh=True,
     show_centers=True,
     show_normals=True,
-    normal_scale=8.0,
+    normal_scale=150.0, # para esfera 8.0  # para cápsula 150 # se podría hacer una función para que sea automático en función del stl
     color_by="area",
     title="Sphere STL - face geometry",
 )
