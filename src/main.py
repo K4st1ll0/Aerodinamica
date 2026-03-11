@@ -1,14 +1,15 @@
 from pathlib import Path
+import numpy as np
+
 from stl_utils import load_stl, print_mesh_summary, compute_face_geometry
 from stl_utils import plot_geom
 from newton_solver import solve_newton_case
-import numpy as np
 
-# mesh = load_stl(Path("data/esfera.stl"))           # Esfera Moodle
-# mesh = load_stl(Path("data/Capsula/PruebaARD.stl"))  # Prueba STL1 SAG-50mm
-# mesh = load_stl(Path("data/Capsula/PruebaARD2.stl"))  # Prueba STL2 SAG-0.01mm, Step 1 mm(?) argo asi. 400000 triángulos, no recomendable para flojos.
-# mesh = load_stl(Path("data/Capsula/PruebaARD3.stl"))  # Prueba STL1 SAG-15mm step-100mm
-mesh = load_stl(Path("data/Capsula/PruebaARD4.stl"))  # Prueba STL1 SAG-15mm step-100mm con mesh smoothing
+# mesh = load_stl(Path("data/esfera.stl"))              # Esfera Moodle
+# mesh = load_stl(Path("data/Capsula/PruebaARD.stl"))   # Prueba STL1 SAG-50mm
+# mesh = load_stl(Path("data/Capsula/PruebaARD2.stl"))  # Prueba STL2 SAG-0.01mm, muchísimos triángulos
+# mesh = load_stl(Path("data/Capsula/PruebaARD3.stl"))  # Prueba STL3 SAG-15mm step-100mm
+mesh = load_stl(Path("data/Capsula/PruebaARD4.stl"))    # Prueba STL4 con mesh smoothing
 
 print_mesh_summary(mesh)
 
@@ -35,9 +36,11 @@ alpha_deg = 20.0
 S_ref = 1.0
 L_ref = 1.0
 r_ref = np.array([0.0, 0.0, 0.0])
-eD = np.array([1.0, 0.0, 0.0])
-eL = np.array([0.0, 0.0, 1.0])
-eM = np.array([0.0, 1.0, 0.0])
+
+# Ejes de proyección
+eD = np.array([1.0, 0.0, 0.0])  # drag
+eL = np.array([0.0, 0.0, 1.0])  # lift
+eM = np.array([0.0, 1.0, 0.0])  # momento alrededor de y
 
 # ============================================================
 # CÁLCULO NEWTON
@@ -58,13 +61,26 @@ result = solve_newton_case(
 # ============================================================
 # RESULTADOS BÁSICOS
 # ============================================================
+CF = result["CF_total"]
+CMv = result["CM_total"]
+
 print("\n=== RESULTADOS NEWTON ===")
 print(f"alpha_deg = {result['alpha_deg']}")
-print(f"CF_total  = {result['CF_total']}")
-print(f"CM_total  = {result['CM_total']}")
+
+print(f"CF_total_x = {CF[0]}")
+print(f"CF_total_y = {CF[1]}")
+print(f"CF_total_z = {CF[2]}")
+
+print(f"CM_total_x = {CMv[0]}")
+print(f"CM_total_y = {CMv[1]}")
+print(f"CM_total_z = {CMv[2]}")
+
+print(f"CD = {result['CD']}")
+print(f"CL = {result['CL']}")
+print(f"CM = {result['CM']}")
 
 print("\nPrimeros 10 valores de cp:")
 print(result["cp"][:10])
 
-print("\nNúmero de caras a barlovento:", np.sum(result["mu"] > 0.0))
-print("Número de caras a sotavento :", np.sum(result["mu"] <= 0.0))
+print("\nNúmero de caras a barlovento:", result["n_windward"])
+print("Número de caras a sotavento :", result["n_leeward"])

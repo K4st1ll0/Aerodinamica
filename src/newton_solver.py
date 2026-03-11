@@ -86,6 +86,28 @@ def compute_moment_coeff_faces(
     return np.cross(arm, force_like) / (S_ref * L_ref)
 
 
+def project_global_coefficients(
+    CF_total: np.ndarray,
+    CM_total: np.ndarray,
+    eD: np.ndarray,
+    eL: np.ndarray,
+    eM: np.ndarray,
+) -> dict:
+    """
+    Proyecta los vectores globales de fuerza y momento
+    sobre los ejes definidos de drag, lift y momento.
+    """
+    eD = unit_vector(eD)
+    eL = unit_vector(eL)
+    eM = unit_vector(eM)
+
+    return {
+        "CD": float(np.dot(CF_total, eD)),
+        "CL": float(np.dot(CF_total, eL)),
+        "CM": float(np.dot(CM_total, eM)),
+    }
+
+
 def solve_newton_case(
     centers: np.ndarray,
     areas: np.ndarray,
@@ -127,25 +149,4 @@ def solve_newton_case(
         "n_windward": int(np.sum(mu > 0.0)),
         "n_leeward": int(np.sum(mu <= 0.0)),
         **scalars,
-    }
-
-def project_global_coefficients(
-    CF_total: np.ndarray,
-    CM_total: np.ndarray,
-    eD: np.ndarray,
-    eL: np.ndarray,
-    eM: np.ndarray,
-) -> dict:
-    """
-    Proyecta los vectores globales de fuerza y momento
-    sobre los ejes definidos de drag, lift y momento.
-    """
-    eD = unit_vector(eD)
-    eL = unit_vector(eL)
-    eM = unit_vector(eM)
-
-    return {
-        "CD": float(np.dot(CF_total, eD)),
-        "CL": float(np.dot(CF_total, eL)),
-        "CM": float(np.dot(CM_total, eM)),
     }
