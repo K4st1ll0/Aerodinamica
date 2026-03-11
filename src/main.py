@@ -35,6 +35,9 @@ alpha_deg = 20.0
 S_ref = 1.0
 L_ref = 1.0
 r_ref = np.array([0.0, 0.0, 0.0])
+eD = np.array([1.0, 0.0, 0.0])
+eL = np.array([0.0, 0.0, 1.0])
+eM = np.array([0.0, 1.0, 0.0])
 
 # ============================================================
 # CÁLCULO NEWTON
@@ -47,6 +50,9 @@ result = solve_newton_case(
     S_ref=S_ref,
     L_ref=L_ref,
     r_ref=r_ref,
+    eD=eD,
+    eL=eL,
+    eM=eM,
 )
 
 # ============================================================
