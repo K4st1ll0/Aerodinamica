@@ -13,7 +13,7 @@ def unit_vector(v: np.ndarray) -> np.ndarray:
 
 def flow_direction_from_alpha(alpha_deg: float) -> np.ndarray:
     """
-    Convención:
+    Convención elegida:
     - alpha = 0 deg  -> flujo en -x
     - alpha > 0      -> el flujo se inclina hacia -z
     """
@@ -28,8 +28,9 @@ def flow_direction_from_alpha(alpha_deg: float) -> np.ndarray:
 
 def compute_mu(normals: np.ndarray, Vinf_hat: np.ndarray) -> np.ndarray:
     """
-    mu = n · s, con s = -Vinf_hat apuntando hacia donde viene el aire.
+    mu = n · s, donde s = -Vinf_hat apunta hacia donde viene el aire.
     """
+    normals = np.asarray(normals, dtype=float)
     s_hat = -unit_vector(Vinf_hat)
     return normals @ s_hat
 
@@ -40,6 +41,7 @@ def compute_cp_newton(mu: np.ndarray) -> np.ndarray:
     cp = 2 * mu^2 en barlovento
     cp = 0 en sotavento
     """
+    mu = np.asarray(mu, dtype=float)
     cp = np.zeros_like(mu)
     mask = mu > 0.0
     cp[mask] = 2.0 * mu[mask] ** 2
@@ -94,8 +96,7 @@ def project_global_coefficients(
     eM: np.ndarray,
 ) -> dict:
     """
-    Proyecta los vectores globales de fuerza y momento
-    sobre los ejes definidos de drag, lift y momento.
+    Proyecta fuerza y momento globales en ejes de drag, lift y momento.
     """
     eD = unit_vector(eD)
     eL = unit_vector(eL)
@@ -123,6 +124,10 @@ def solve_newton_case(
     """
     Resuelve un caso con Método de Newton (MN).
     """
+    centers = np.asarray(centers, dtype=float)
+    areas = np.asarray(areas, dtype=float)
+    normals = np.asarray(normals, dtype=float)
+
     Vinf_hat = flow_direction_from_alpha(alpha_deg)
     mu = compute_mu(normals, Vinf_hat)
     cp = compute_cp_newton(mu)
