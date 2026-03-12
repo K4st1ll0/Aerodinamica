@@ -13,14 +13,14 @@ def unit_vector(v: np.ndarray) -> np.ndarray:
 
 def flow_direction_from_alpha(alpha_deg: float) -> np.ndarray:
     """
-    Convención elegida:
-    - alpha = 0 deg  -> flujo en -x
+    Convención nueva:
+    - alpha = 0 deg  -> flujo en -y
     - alpha > 0      -> el flujo se inclina hacia -z
     """
     alpha = np.deg2rad(alpha_deg)
     v = np.array([
-        -np.cos(alpha),
         0.0,
+        -np.cos(alpha),
         -np.sin(alpha),
     ], dtype=float)
     return unit_vector(v)

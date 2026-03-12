@@ -1,21 +1,23 @@
 from pathlib import Path
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-from stl_utils import load_stl, print_mesh_summary, compute_face_geometry
-from stl_utils import plot_geom
+from stl_utils import load_stl, print_mesh_summary, compute_face_geometry, plot_geom
 from newton_solver import solve_newton_case
 
+### falta guardar en json
+### falta comparar dos mallas
 
 def estimate_reference_values(mesh, geom):
     """
     Estima S_ref, L_ref y r_ref a partir de la geometría.
     Convención práctica:
-    - flujo principal en x
-    - S_ref = área proyectada frontal aproximada en plano yz
-    - L_ref = longitud en x
+    - flujo principal en y
+    - S_ref = área frontal aproximada en plano xz
+    - L_ref = longitud en y
     - r_ref = centroide global de caras ponderado por área
     """
     bounds_min = np.asarray(mesh.bounds[0], dtype=float)
@@ -25,12 +27,11 @@ def estimate_reference_values(mesh, geom):
     centers = geom["centers"]
     areas = geom["areas"]
 
-    # Longitud de referencia: extensión en x
-    L_ref = float(extents[0])
+    # Longitud de referencia: extensión en y
+    L_ref = float(extents[1])
 
-    # Área de referencia: caja frontal yz
-    # Es una aproximación sencilla y estable para arrancar
-    S_ref = float(extents[1] * extents[2])
+    # Área de referencia: caja frontal xz
+    S_ref = float(extents[0] * extents[2])
 
     # Punto de referencia: centroide superficial aproximado
     r_ref = np.average(centers, axis=0, weights=areas)
@@ -112,103 +113,195 @@ def print_case_results(name, result):
     print(f"cp_max      = {np.max(result['cp'])}")
 
 
-# ============================================================
-# CARGA DE MALLA
-# ============================================================
+def save_results_csv(filepath, rows):
+    fieldnames = [
+        "alpha_deg",
+        "CD",
+        "CL",
+        "CM",
+        "CF_total_x",
+        "CF_total_y",
+        "CF_total_z",
+        "CM_total_x",
+        "CM_total_y",
+        "CM_total_z",
+        "n_windward",
+        "n_leeward",
+        "cp_min",
+        "cp_max",
+    ]
 
-# mesh = load_stl(Path("data/esfera.stl"))
-# mesh = load_stl(Path("data/Capsula/PruebaARD.stl"))
-# mesh = load_stl(Path("data/Capsula/PruebaARD2.stl"))
-# mesh = load_stl(Path("data/Capsula/PruebaARD3.stl"))
-mesh = load_stl(Path("data/Capsula/PruebaARD4.stl"))
+    with open(filepath, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
-print_mesh_summary(mesh)
+    print(f"\nResultados guardados en: {filepath}")
 
-geom = compute_face_geometry(mesh)
 
-centers = geom["centers"]
-areas = geom["areas"]
-normals = geom["normals"]
+def save_cp_faces_csv(filepath, centers, cp):
+    with open(filepath, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["x_center", "y_center", "z_center", "cp"])
 
-# ============================================================
-# VISUALIZACIÓN GEOMÉTRICA
-# ============================================================
+        for c, cp_i in zip(centers, cp):
+            writer.writerow([c[0], c[1], c[2], cp_i])
 
-diag = np.linalg.norm(mesh.bounds[1] - mesh.bounds[0])
-normal_scale = 0.03 * diag
+    print(f"Cp por cara guardado en: {filepath}")
 
-plot_geom(
-    geom,
-    show_mesh=True,
-    show_centers=True,
-    show_normals=True,
-    normal_scale=normal_scale,
-    color_by="area",
-    title="STL - face geometry",
-)
 
-# ============================================================
-# REFERENCIAS GEOMÉTRICAS
-# ============================================================
+def run_alpha_sweep(
+    alphas_deg,
+    centers,
+    areas,
+    normals,
+    S_ref,
+    L_ref,
+    r_ref,
+    eD,
+    eL,
+    eM,
+):
+    rows = []
 
-S_ref, L_ref, r_ref, bounds_min, bounds_max, extents = estimate_reference_values(mesh, geom)
+    for alpha_deg in alphas_deg:
+        result = solve_newton_case(
+            centers=centers,
+            areas=areas,
+            normals=normals,
+            alpha_deg=float(alpha_deg),
+            S_ref=S_ref,
+            L_ref=L_ref,
+            r_ref=r_ref,
+            eD=eD,
+            eL=eL,
+            eM=eM,
+        )
 
-print("\n=== REFERENCIAS USADAS ===")
-print(f"S_ref = {S_ref}")
-print(f"L_ref = {L_ref}")
-print(f"r_ref = {r_ref}")
+        print_case_results(f"RESULTADOS NEWTON - alpha {alpha_deg} deg", result)
 
-# ============================================================
-# EJES DE PROYECCIÓN
-# ============================================================
-# Como el flujo base va hacia -x, el drag positivo lo tomamos en -x
-eD = np.array([-1.0, 0.0, 0.0])
-eL = np.array([0.0, 0.0, -1.0])   # ajustado a la convención del flujo
-eM = np.array([0.0, 1.0, 0.0])    # pitching moment alrededor de y
+        CF = result["CF_total"]
+        CMv = result["CM_total"]
 
-# ============================================================
-# CASO 1: alpha = 0 deg
-# ============================================================
+        rows.append({
+            "alpha_deg": result["alpha_deg"],
+            "CD": result["CD"],
+            "CL": result["CL"],
+            "CM": result["CM"],
+            "CF_total_x": CF[0],
+            "CF_total_y": CF[1],
+            "CF_total_z": CF[2],
+            "CM_total_x": CMv[0],
+            "CM_total_y": CMv[1],
+            "CM_total_z": CMv[2],
+            "n_windward": result["n_windward"],
+            "n_leeward": result["n_leeward"],
+            "cp_min": float(np.min(result["cp"])),
+            "cp_max": float(np.max(result["cp"])),
+        })
 
-result_0 = solve_newton_case(
-    centers=centers,
-    areas=areas,
-    normals=normals,
-    alpha_deg=0.0,
-    S_ref=S_ref,
-    L_ref=L_ref,
-    r_ref=r_ref,
-    eD=eD,
-    eL=eL,
-    eM=eM,
-)
+    return rows
 
-print_case_results("RESULTADOS NEWTON - alpha 0 deg", result_0)
 
-# ============================================================
-# CASO 2: alpha = 20 deg
-# ============================================================
+def main():
+    # ============================================================
+    # CARGA DE MALLA
+    # ============================================================
 
-result_20 = solve_newton_case(
-    centers=centers,
-    areas=areas,
-    normals=normals,
-    alpha_deg=20.0,
-    S_ref=S_ref,
-    L_ref=L_ref,
-    r_ref=r_ref,
-    eD=eD,
-    eL=eL,
-    eM=eM,
-)
+    # mesh = load_stl(Path("data/esfera.stl"))
+    # mesh = load_stl(Path("data/Capsula/PruebaARD.stl"))
+    # mesh = load_stl(Path("data/Capsula/PruebaARD2.stl"))
+    # mesh = load_stl(Path("data/Capsula/PruebaARD3.stl"))
+    mesh = load_stl(Path("data/Capsula/PruebaARD4.stl"))
 
-print_case_results("RESULTADOS NEWTON - alpha 20 deg", result_20)
+    print_mesh_summary(mesh)
 
-print("\nPrimeros 10 valores de cp (alpha=20):")
-print(result_20["cp"][:10])
+    geom = compute_face_geometry(mesh)
 
-# ============================================================
-# MAPA DE CP
-# ============================================================
+    centers = geom["centers"]
+    areas = geom["areas"]
+    normals = geom["normals"]
 
-plot_cp_map(mesh, geom, result_20["cp"], title="Cp map - Newton - alpha 20 deg")
+    # ============================================================
+    # VISUALIZACIÓN GEOMÉTRICA
+    # ============================================================
+
+    diag = np.linalg.norm(mesh.bounds[1] - mesh.bounds[0])
+    normal_scale = 0.03 * diag
+
+    plot_geom(
+        geom,
+        show_mesh=True,
+        show_centers=True,
+        show_normals=True,
+        normal_scale=normal_scale,
+        color_by="area",
+        title="STL - face geometry",
+    )
+
+    # ============================================================
+    # REFERENCIAS GEOMÉTRICAS
+    # ============================================================
+
+    S_ref, L_ref, r_ref, bounds_min, bounds_max, extents = estimate_reference_values(mesh, geom)
+
+    print("\n=== REFERENCIAS USADAS ===")
+    print(f"S_ref = {S_ref}")
+    print(f"L_ref = {L_ref}")
+    print(f"r_ref = {r_ref}")
+
+    # ============================================================
+    # EJES DE PROYECCIÓN
+    # ============================================================
+
+    eD = np.array([0.0, -1.0, 0.0])  # drag positivo en -y
+    eL = np.array([0.0, 0.0, -1.0])  # lift en -z
+    eM = np.array([1.0, 0.0, 0.0])   # momento alrededor de x
+
+    # ============================================================
+    # BARRIDO DE ÁNGULOS
+    # ============================================================
+
+    alphas_deg = [0.0, 10.0, 20.0, 30.0]
+
+    rows = run_alpha_sweep(
+        alphas_deg=alphas_deg,
+        centers=centers,
+        areas=areas,
+        normals=normals,
+        S_ref=S_ref,
+        L_ref=L_ref,
+        r_ref=r_ref,
+        eD=eD,
+        eL=eL,
+        eM=eM,
+    )
+
+    save_results_csv("results_newton.csv", rows)
+
+    # ============================================================
+    # MAPA DE CP PARA alpha = 20 deg
+    # ============================================================
+
+    result_20 = solve_newton_case(
+        centers=centers,
+        areas=areas,
+        normals=normals,
+        alpha_deg=20.0,
+        S_ref=S_ref,
+        L_ref=L_ref,
+        r_ref=r_ref,
+        eD=eD,
+        eL=eL,
+        eM=eM,
+    )
+
+    print("\nPrimeros 10 valores de cp (alpha=20):")
+    print(result_20["cp"][:10])
+
+    save_cp_faces_csv("cp_faces_alpha20.csv", centers, result_20["cp"])
+    plot_cp_map(mesh, geom, result_20["cp"], title="Cp map - Newton - alpha 20 deg")
+
+
+if __name__ == "__main__":
+    main()
