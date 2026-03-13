@@ -6,7 +6,8 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from stl_utils import load_stl, print_mesh_summary, compute_face_geometry, plot_geom
-from newton_solver import solve_newton_case
+from MN import solve_newton_case
+from MNM import solve_modified_newton_case
 
 ### falta guardar en json
 ### falta comparar dos mallas
@@ -202,6 +203,175 @@ def run_alpha_sweep(
 
     return rows
 
+def run_mnm_alpha_sweep(
+    alphas_deg,
+    Mach,
+    centers,
+    areas,
+    normals,
+    S_ref,
+    L_ref,
+    r_ref,
+    eD,
+    eL,
+    eM,
+    gamma=1.4,
+):
+    rows = []
+
+    for alpha_deg in alphas_deg:
+        result = solve_modified_newton_case(
+            centers=centers,
+            areas=areas,
+            normals=normals,
+            alpha_deg=float(alpha_deg),
+            Mach=float(Mach),
+            S_ref=S_ref,
+            L_ref=L_ref,
+            r_ref=r_ref,
+            eD=eD,
+            eL=eL,
+            eM=eM,
+            gamma=gamma,
+        )
+
+        print(f"\n=== RESULTADOS MNM - alpha {alpha_deg} deg - M {Mach} ===")
+        print(f"cp_max      = {result['cp_max']}")
+        print(f"CD          = {result['CD']}")
+        print(f"CL          = {result['CL']}")
+        print(f"CM          = {result['CM']}")
+        print(f"n_windward  = {result['n_windward']}")
+        print(f"n_leeward   = {result['n_leeward']}")
+        print(f"cp_min      = {np.min(result['cp'])}")
+        print(f"cp_max_face = {np.max(result['cp'])}")
+
+        CF = result["CF_total"]
+        CMv = result["CM_total"]
+
+        rows.append({
+            "alpha_deg": result["alpha_deg"],
+            "Mach": result["Mach"],
+            "gamma": result["gamma"],
+            "cp_max_stagnation": result["cp_max"],
+            "CD": result["CD"],
+            "CL": result["CL"],
+            "CM": result["CM"],
+            "CF_total_x": CF[0],
+            "CF_total_y": CF[1],
+            "CF_total_z": CF[2],
+            "CM_total_x": CMv[0],
+            "CM_total_y": CMv[1],
+            "CM_total_z": CMv[2],
+            "n_windward": result["n_windward"],
+            "n_leeward": result["n_leeward"],
+            "cp_min": float(np.min(result["cp"])),
+            "cp_max": float(np.max(result["cp"])),
+        })
+
+    return rows
+
+def save_results_csv_mnm(filepath, rows):
+    fieldnames = [
+        "alpha_deg",
+        "Mach",
+        "gamma",
+        "cp_max_stagnation",
+        "CD",
+        "CL",
+        "CM",
+        "CF_total_x",
+        "CF_total_y",
+        "CF_total_z",
+        "CM_total_x",
+        "CM_total_y",
+        "CM_total_z",
+        "n_windward",
+        "n_leeward",
+        "cp_min",
+        "cp_max",
+    ]
+
+    with open(filepath, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"\nResultados MNM guardados en: {filepath}")
+
+def run_mnm_mach_sweep(
+    Mach_list,
+    centers,
+    areas,
+    normals,
+    alpha_deg,
+    S_ref,
+    L_ref,
+    r_ref,
+    eD,
+    eL,
+    eM,
+    gamma=1.4,
+):
+    rows = []
+
+    for Mach in Mach_list:
+        result = solve_modified_newton_case(
+            centers=centers,
+            areas=areas,
+            normals=normals,
+            alpha_deg=float(alpha_deg),
+            Mach=float(Mach),
+            S_ref=S_ref,
+            L_ref=L_ref,
+            r_ref=r_ref,
+            eD=eD,
+            eL=eL,
+            eM=eM,
+            gamma=gamma,
+        )
+
+        CF = result["CF_total"]
+        CMv = result["CM_total"]
+
+        print(f"\n=== RESULTADOS MNM - alpha {alpha_deg} deg - M {Mach} ===")
+        print(f"cp_max_stagnation = {result['cp_max']}")
+        print(f"CF_total_x        = {CF[0]}")
+        print(f"CF_total_y        = {CF[1]}")
+        print(f"CF_total_z        = {CF[2]}")
+        print(f"CM_total_x        = {CMv[0]}")
+        print(f"CM_total_y        = {CMv[1]}")
+        print(f"CM_total_z        = {CMv[2]}")
+        print(f"CD                = {result['CD']}")
+        print(f"CL                = {result['CL']}")
+        print(f"CM                = {result['CM']}")
+        print(f"n_windward        = {result['n_windward']}")
+        print(f"n_leeward         = {result['n_leeward']}")
+        print(f"cp_min            = {np.min(result['cp'])}")
+        print(f"cp_max_face       = {np.max(result['cp'])}")
+
+        rows.append({
+            "Mach": result["Mach"],
+            "alpha_deg": result["alpha_deg"],
+            "gamma": result["gamma"],
+            "cp_max_stagnation": result["cp_max"],
+            "CD": result["CD"],
+            "CL": result["CL"],
+            "CM": result["CM"],
+            "CF_total_x": CF[0],
+            "CF_total_y": CF[1],
+            "CF_total_z": CF[2],
+            "CM_total_x": CMv[0],
+            "CM_total_y": CMv[1],
+            "CM_total_z": CMv[2],
+            "n_windward": result["n_windward"],
+            "n_leeward": result["n_leeward"],
+            "cp_min": float(np.min(result["cp"])),
+            "cp_max": float(np.max(result["cp"])),
+        })
+
+    return rows
+
+
 
 def main():
     # ============================================================
@@ -264,6 +434,7 @@ def main():
 
     alphas_deg = [0.0, 10.0, 20.0, 30.0]
 
+    '''
     rows = run_alpha_sweep(
         alphas_deg=alphas_deg,
         centers=centers,
@@ -278,11 +449,81 @@ def main():
     )
 
     save_results_csv("results_newton.csv", rows)
+    '''
 
+    # ============================================================
+    # BARRIDO DE ÁNGULOS - MNM
+    # ============================================================
+
+    Mach = 8.0
+    gamma = 1.4
+
+    rows_mnm = run_mnm_alpha_sweep(
+        alphas_deg=alphas_deg,
+        Mach=Mach,
+        centers=centers,
+        areas=areas,
+        normals=normals,
+        S_ref=S_ref,
+        L_ref=L_ref,
+        r_ref=r_ref,
+        eD=eD,
+        eL=eL,
+        eM=eM,
+        gamma=gamma,
+    )
+
+    save_results_csv_mnm("results_mnm_M8.csv", rows_mnm)
+  
+      # ============================================================
+    # BARRIDO EN MACH PARA SENSIBILIDAD
+    # ============================================================
+
+    Mach_list = [2.0, 4.0, 8.0, 12.0]
+
+    rows_mach = run_mnm_mach_sweep(
+        Mach_list=Mach_list,
+        centers=centers,
+        areas=areas,
+        normals=normals,
+        alpha_deg=0.0,
+        S_ref=S_ref,
+        L_ref=L_ref,
+        r_ref=r_ref,
+        eD=eD,
+        eL=eL,
+        eM=eM,
+        gamma=gamma,
+    )
+
+    save_results_csv_mnm("results_mnm_mach_sweep.csv", rows_mach)
+    
+    result_mnm_20 = solve_modified_newton_case(
+        centers=centers,
+        areas=areas,
+        normals=normals,
+        alpha_deg=20.0,
+        Mach=8.0,
+        S_ref=S_ref,
+        L_ref=L_ref,
+        r_ref=r_ref,
+        eD=eD,
+        eL=eL,
+        eM=eM,
+        gamma=1.4,
+    )
+
+    print("\nPrimeros 10 valores de cp MNM (alpha=20, M=8):")
+    print(result_mnm_20["cp"][:10])
+    print(f"cp_max de remanso = {result_mnm_20['cp_max']}")
+
+    save_cp_faces_csv("cp_faces_mnm_alpha20_M8.csv", centers, result_mnm_20["cp"])
+    plot_cp_map(mesh, geom, result_mnm_20["cp"], title="Cp map - MNM - alpha 20 deg - M8")
     # ============================================================
     # MAPA DE CP PARA alpha = 20 deg
     # ============================================================
 
+    '''
     result_20 = solve_newton_case(
         centers=centers,
         areas=areas,
@@ -301,7 +542,7 @@ def main():
 
     save_cp_faces_csv("cp_faces_alpha20.csv", centers, result_20["cp"])
     plot_cp_map(mesh, geom, result_20["cp"], title="Cp map - Newton - alpha 20 deg")
-
+    '''
 
 if __name__ == "__main__":
     main()
