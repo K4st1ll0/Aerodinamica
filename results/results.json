@@ -1,0 +1,274 @@
+{
+  "schema": {
+    "name": "AAVFR_TP1_results",
+    "version": "1.1"
+  },
+  "team": {
+    "group_id": "G5 - ARD",
+    "members": [
+      "Pablo Castillo Jiménez",
+      "Alberto García Díaz",
+      "Ana Jorba Vera"
+    ]
+  },
+  "reference": {
+    "coordinate_system": "STL body frame: x lateral, y axial (nose at y_min), z vertical. Units: mm.",
+    "alpha_definition": "alpha>0 inclina el flujo hacia -z (morro arriba). Vinf=[0,-cos(a),-sin(a)].",
+    "vinf_direction_body": [
+      0.0,
+      -1.0,
+      -0.0
+    ],
+    "Sref_m2": 7.74406313,
+    "Lref_m": 2.040038,
+    "moment_reference_point_m": [
+      -0.0,
+      -1.846204,
+      0.0
+    ],
+    "CD_axis_body": [
+      0.0,
+      -1.0,
+      -0.0
+    ],
+    "CL_axis_body": [
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "CM_axis_body": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "_sphere_Sref_m2": 0.00774234,
+    "_sphere_Lref_m": 0.099287
+  },
+  "cases": [
+    {
+      "case_id": "sphere_MN_a0_M8",
+      "geometry_name": "sphere",
+      "stl_file": "data/esfera.stl",
+      "triangles": 528,
+      "model": "MN",
+      "Mach": 8.0,
+      "alpha_deg": 0.0,
+      "CD": 1.00281549,
+      "CL": 0.0,
+      "CM": -0.0,
+      "force_coeff_body": [
+        0.0,
+        -1.00281549,
+        -0.0
+      ],
+      "moment_coeff_body": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "_n_windward": 264,
+      "_n_leeward": 264,
+      "_cp_max_mnm": null
+    },
+    {
+      "case_id": "sphere_MNM_a0_M2",
+      "geometry_name": "sphere",
+      "stl_file": "data/esfera.stl",
+      "triangles": 528,
+      "model": "MNM",
+      "Mach": 2.0,
+      "alpha_deg": 0.0,
+      "CD": 0.65767559,
+      "CL": -0.0,
+      "CM": -0.0,
+      "force_coeff_body": [
+        0.0,
+        -0.65767559,
+        0.0
+      ],
+      "moment_coeff_body": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "_n_windward": 264,
+      "_n_leeward": 264,
+      "_cp_max_mnm": 1.31165822
+    },
+    {
+      "case_id": "sphere_MNM_a0_M8",
+      "geometry_name": "sphere",
+      "stl_file": "data/esfera.stl",
+      "triangles": 528,
+      "model": "MNM",
+      "Mach": 8.0,
+      "alpha_deg": 0.0,
+      "CD": 0.837543,
+      "CL": -0.0,
+      "CM": -0.0,
+      "force_coeff_body": [
+        0.0,
+        -0.837543,
+        0.0
+      ],
+      "moment_coeff_body": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "_n_windward": 264,
+      "_n_leeward": 264,
+      "_cp_max_mnm": 1.67038306
+    },
+    {
+      "case_id": "capsule_MN_a0_M8",
+      "geometry_name": "capsule",
+      "stl_file": "data/PruebaARD3.stl",
+      "triangles": 1510,
+      "model": "MN",
+      "Mach": 8.0,
+      "alpha_deg": 0.0,
+      "CD": 0.60943387,
+      "CL": -0.0,
+      "CM": -0.0,
+      "force_coeff_body": [
+        -0.0,
+        -0.60943387,
+        0.0
+      ],
+      "moment_coeff_body": [
+        -0.0,
+        8.26e-06,
+        -0.0
+      ],
+      "_n_windward": 844,
+      "_n_leeward": 666,
+      "_cp_max_mnm": null
+    },
+    {
+      "case_id": "capsule_MNM_a0_M8",
+      "geometry_name": "capsule",
+      "stl_file": "data/PruebaARD3.stl",
+      "triangles": 1510,
+      "model": "MNM",
+      "Mach": 8.0,
+      "alpha_deg": 0.0,
+      "CD": 0.50899401,
+      "CL": 0.0,
+      "CM": -0.0,
+      "force_coeff_body": [
+        0.0,
+        -0.50899401,
+        -0.0
+      ],
+      "moment_coeff_body": [
+        -0.0,
+        6.9e-06,
+        0.0
+      ],
+      "_n_windward": 844,
+      "_n_leeward": 666,
+      "_cp_max_mnm": 1.67038306
+    },
+    {
+      "case_id": "capsule_MNM_a10_M8",
+      "geometry_name": "capsule",
+      "stl_file": "data/PruebaARD3.stl",
+      "triangles": 1510,
+      "model": "MNM",
+      "Mach": 8.0,
+      "alpha_deg": 10.0,
+      "CD": 0.52174952,
+      "CL": 0.0468216,
+      "CM": 0.02301537,
+      "force_coeff_body": [
+        -0.00010804,
+        -0.50569249,
+        -0.13671113
+      ],
+      "moment_coeff_body": [
+        0.02301537,
+        8.28e-06,
+        -2.921e-05
+      ],
+      "_n_windward": 831,
+      "_n_leeward": 679,
+      "_cp_max_mnm": 1.67038306
+    },
+    {
+      "case_id": "capsule_MNM_a20_M8",
+      "geometry_name": "capsule",
+      "stl_file": "data/PruebaARD3.stl",
+      "triangles": 1510,
+      "model": "MNM",
+      "Mach": 8.0,
+      "alpha_deg": 20.0,
+      "CD": 0.55452166,
+      "CL": 0.07382502,
+      "CM": 0.04333794,
+      "force_coeff_body": [
+        -8.006e-05,
+        -0.49583027,
+        -0.25903041
+      ],
+      "moment_coeff_body": [
+        0.04333794,
+        1.311e-05,
+        -4.701e-05
+      ],
+      "_n_windward": 807,
+      "_n_leeward": 703,
+      "_cp_max_mnm": 1.67038306
+    },
+    {
+      "case_id": "capsule_MN_mesh_coarse_a10_M8",
+      "geometry_name": "capsule",
+      "stl_file": "data/PruebaARD3.stl",
+      "triangles": 1510,
+      "model": "MN",
+      "Mach": 8.0,
+      "alpha_deg": 10.0,
+      "CD": 0.62470643,
+      "CL": 0.05606091,
+      "CM": 0.02755699,
+      "force_coeff_body": [
+        -0.00012936,
+        -0.60548086,
+        -0.16368835
+      ],
+      "moment_coeff_body": [
+        0.02755699,
+        9.92e-06,
+        -3.498e-05
+      ],
+      "_n_windward": 831,
+      "_n_leeward": 679,
+      "_cp_max_mnm": null
+    },
+    {
+      "case_id": "capsule_MN_mesh_fine_a10_M8",
+      "geometry_name": "capsule",
+      "stl_file": "data/PruebaARD3.stl",
+      "triangles": 1510,
+      "model": "MN",
+      "Mach": 8.0,
+      "alpha_deg": 10.0,
+      "CD": 0.62470643,
+      "CL": 0.05606091,
+      "CM": 0.02755699,
+      "force_coeff_body": [
+        -0.00012936,
+        -0.60548086,
+        -0.16368835
+      ],
+      "moment_coeff_body": [
+        0.02755699,
+        9.92e-06,
+        -3.498e-05
+      ],
+      "_n_windward": 831,
+      "_n_leeward": 679,
+      "_cp_max_mnm": null
+    }
+  ]
+}
