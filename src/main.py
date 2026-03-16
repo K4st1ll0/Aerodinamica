@@ -28,6 +28,7 @@ from export import (
     generate_html,
     _check,
 )
+from generate_3d_report import generate_3d_html
 
 # ─── Rutas base ───────────────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parent.parent
@@ -504,6 +505,16 @@ def main():
     save_json(results, RESULTS_DIR / "results.json")
     generate_html(results, RESULTS_DIR / "report.html")
     _check(results)
+
+    cp_csv = RESULTS_DIR / f"cp_faces_{CP_MAP_METHOD.lower()}_a{int(abs(CP_MAP_ALPHA))}_M{int(MACH)}.csv" \
+             if CP_MAP_ALPHA is not None else None
+    generate_3d_html(
+        results_json = RESULTS_DIR / "results.json",
+        cp_csv       = cp_csv,
+        stl_capsule  = STL_CAPSULE,
+        stl_sphere   = STL_SPHERE,
+        out_path     = RESULTS_DIR / "report_3d.html",
+    )
 
 
 if __name__ == "__main__":
