@@ -55,8 +55,17 @@ def compute_cpmax_modified_newton(Mach: float, gamma: float = 1.4) -> float:
     if g <= 1.0:
         raise ValueError("gamma debe ser > 1.")
 
-    term1 = ((g + 1.0) / 2.0 * M**2) ** (g / (g + 1.0))
-    term2 = ((1.0 - g + 2.0 * g * M**2) / (g + 1.0)) ** (1.0 / (g + 1.0))
+def compute_cpmax_modified_newton(Mach: float, gamma: float = 1.4) -> float:
+    M = float(Mach)
+    g = float(gamma)
+
+    if M <= 0.0:
+        raise ValueError("Mach debe ser > 0.")
+    if g <= 1.0:
+        raise ValueError("gamma debe ser > 1.")
+
+    term1 = ((g + 1.0)**2 * M**2 / (4.0 * g * M**2 - 2.0 * (g - 1.0))) ** (g / (g - 1.0))
+    term2 = (2.0 * g * M**2 - (g - 1.0)) / (g + 1.0)
     p02_over_pinf = term1 * term2
 
     cp_max = (2.0 / (g * M**2)) * (p02_over_pinf - 1.0)
