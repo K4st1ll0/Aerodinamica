@@ -235,10 +235,10 @@ def main():
     # ╠══════════════════════════════════════════════════════════════════════╣
 
     # ── Geometrías ────────────────────────────────────────────────────────
-    STL_CAPSULE = DATA_DIR / "Capsula" / "PruebaARD3.stl" #Por ejemplo
+    STL_CAPSULE = DATA_DIR / "Capsula" / "PruebaARD3.stl"
     STL_SPHERE  = DATA_DIR / "esfera.stl"
-    STL_COARSE  = None   # DATA_DIR / "Capsula" / "PruebaARD3_coarse.stl"
-    STL_FINE    = None   # DATA_DIR / "Capsula" / "PruebaARD3_fine.stl"
+    STL_COARSE  = DATA_DIR / "Capsula" / "PruebaARD.stl"   # 182 caras
+    STL_FINE    = DATA_DIR / "Capsula" / "PruebaARD4.stl"  # 1510 caras
 
     # ── Condiciones de flujo ───────────────────────────────────────────────
     ALPHAS_DEG  = [0.0, 10.0, 20.0, 30.0]   # barrido en alpha
@@ -251,9 +251,21 @@ def main():
     CP_MAP_METHOD = "MNM"   # "MN" o "MNM"
 
     # ── Activar / desactivar sweeps ───────────────────────────────────────
-    RUN_MN_SWEEP   = True
-    RUN_MNM_SWEEP  = True
-    RUN_MACH_SWEEP = True
+    RUN_MN_SWEEP          = True
+    RUN_MNM_SWEEP         = True
+    RUN_MACH_SWEEP        = True
+    RUN_MESH_SENSITIVITY  = True   # Comparativa PruebaARD / ARD3 / ARD4 / ARD2
+
+    # ── Condiciones para el sweep de sensibilidad de malla ────────────────
+    MESH_ALPHA = 10.0   # alpha fijo
+    MESH_MACH  = 8.0    # Mach fijo
+    # Mallas a comparar (en orden de refinamiento creciente)
+    MESH_STLS  = [
+        DATA_DIR / "Capsula" / "PruebaARD.stl",   # muy gruesa  ~182
+        DATA_DIR / "Capsula" / "PruebaARD3.stl",  # media      ~1510
+        DATA_DIR / "Capsula" / "PruebaARD4.stl",  # media-alta ~1510
+        DATA_DIR / "Capsula" / "PruebaARD2.stl",  # muy fina   ~400k
+    ]
 
     # ── Visualización geométrica al arrancar ──────────────────────────────
     SHOW_GEOMETRY = True
@@ -435,7 +447,7 @@ def main():
         print(f"  {case_id:45s}  CD={CD:.5f}  CL={CL:.5f}  CM={CM:.5f}")
         return build_case_dict(
             case_id=case_id, geometry_name=geo_name,
-            stl_file=f"data/{stl_path.name}",
+            stl_file=str(stl_path.relative_to(ROOT)).replace("\\", "/"),
             triangles=tri, model=model, Mach=float(M), alpha_deg=float(alpha),
             CF_total=CF, CM_total=CMv,
             CD=CD, CL=CL, CM=CM,
@@ -479,6 +491,58 @@ def main():
     ]
 
     # ══════════════════════════════════════════════════════════════════════
+    # SENSIBILIDAD DE MALLA — comparativa PruebaARD / ARD3 / ARD4 / ARD2
+    # ══════════════════════════════════════════════════════════════════════
+    if RUN_MESH_SENSITIVITY:
+        print("\n" + "═"*60)
+        print(f"Sensibilidad de malla | alpha={MESH_ALPHA}° | M={MESH_MACH}")
+        print("═"*60)
+        eD_ms, eL_ms, eM_ms = wind_axes(MESH_ALPHA)
+        rows_mesh = []
+        for stl_p in MESH_STLS:
+            if not stl_p.exists():
+                print(f"  [SKIP] {stl_p.name} — no encontrado")
+                continue
+            m_ms  = load_stl(stl_p)
+            g_ms  = compute_face_geometry(m_ms)
+            c_ms, a_ms, n_ms = g_ms["centers"], g_ms["areas"], g_ms["normals"]
+            S_ms, L_ms, r_ms = get_capsule_refs(m_ms, g_ms)
+            n_f   = len(a_ms)
+            print(f"  {stl_p.name:25s}  ({n_f} caras)")
+            for model in ("MN", "MNM"):
+                if model == "MN":
+                    r_ms_res = solve_newton_case(
+                        centers=c_ms, areas=a_ms, normals=n_ms,
+                        alpha_deg=MESH_ALPHA, S_ref=S_ms, L_ref=L_ms, r_ref=r_ms,
+                        eD=eD_ms, eL=eL_ms, eM=eM_ms,
+                    )
+                else:
+                    r_ms_res = solve_modified_newton_case(
+                        centers=c_ms, areas=a_ms, normals=n_ms,
+                        alpha_deg=MESH_ALPHA, Mach=MESH_MACH,
+                        S_ref=S_ms, L_ref=L_ms, r_ref=r_ms,
+                        eD=eD_ms, eL=eL_ms, eM=eM_ms, gamma=GAMMA,
+                    )
+                rows_mesh.append({
+                    "stl":       stl_p.name,
+                    "n_faces":   n_f,
+                    "model":     model,
+                    "alpha_deg": MESH_ALPHA,
+                    "Mach":      MESH_MACH,
+                    "CD":        r_ms_res["CD"],
+                    "CL":        r_ms_res["CL"],
+                    "CM":        r_ms_res["CM"],
+                    "n_windward": r_ms_res["n_windward"],
+                })
+                print(f"    {model}: CD={r_ms_res['CD']:.5f}  CL={r_ms_res['CL']:.5f}"
+                      f"  CM={r_ms_res['CM']:.5f}")
+        save_csv(
+            RESULTS_DIR / "results_mesh_sensitivity.csv",
+            rows_mesh,
+            ["stl", "n_faces", "model", "alpha_deg", "Mach", "CD", "CL", "CM", "n_windward"],
+        )
+
+    # ══════════════════════════════════════════════════════════════════════
     # EXPORTAR results.json + report.html
     # ══════════════════════════════════════════════════════════════════════
     print("\n" + "═"*60)
@@ -508,12 +572,16 @@ def main():
 
     cp_csv = RESULTS_DIR / f"cp_faces_{CP_MAP_METHOD.lower()}_a{int(abs(CP_MAP_ALPHA))}_M{int(MACH)}.csv" \
              if CP_MAP_ALPHA is not None else None
+    mesh_csv = RESULTS_DIR / "results_mesh_sensitivity.csv" \
+               if RUN_MESH_SENSITIVITY else None
     generate_3d_html(
-        results_json = RESULTS_DIR / "results.json",
-        cp_csv       = cp_csv,
-        stl_capsule  = STL_CAPSULE,
-        stl_sphere   = STL_SPHERE,
-        out_path     = RESULTS_DIR / "report_3d.html",
+        results_json  = RESULTS_DIR / "results.json",
+        cp_csv        = cp_csv,
+        stl_capsule   = STL_CAPSULE,
+        stl_sphere    = STL_SPHERE,
+        stl_coarse    = MESH_STLS[0] if RUN_MESH_SENSITIVITY else None,
+        mesh_sens_csv = mesh_csv,
+        out_path      = RESULTS_DIR / "report_3d.html",
     )
 
 

@@ -23,6 +23,37 @@ import numpy as np
 
 # ── Rutas base ──────────────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parent.parent
+
+# Importar solver (mismo directorio que este archivo)
+sys.path.insert(0, str(Path(__file__).parent))
+try:
+    from MN  import solve_newton_case          as _solve_mn
+    from MNM import solve_modified_newton_case as _solve_mnm
+    _SOLVER_OK = True
+except ImportError as _e:
+    _SOLVER_OK = False
+    print(f"[AVISO] Solver no disponible ({_e}); viewer interactivo deshabilitado.", file=sys.stderr)
+
+
+def _stl_load(path):
+    """Carga STL y devuelve trimesh.Trimesh."""
+    import trimesh
+    m = trimesh.load(str(path), force="mesh")
+    return m
+
+
+def _face_geom(mesh):
+    """Equivalente ligero de stl_utils.compute_face_geometry (sin matplotlib)."""
+    verts = np.asarray(mesh.vertices, dtype=float)
+    faces = np.asarray(mesh.faces, dtype=int)
+    v0 = verts[faces[:, 0]]
+    v1 = verts[faces[:, 1]]
+    v2 = verts[faces[:, 2]]
+    cross   = np.cross(v1 - v0, v2 - v0)
+    areas   = np.linalg.norm(cross, axis=1) / 2.0
+    normals = cross / (2.0 * areas[:, None] + 1e-30)
+    centers = (v0 + v1 + v2) / 3.0
+    return {"centers": centers, "areas": areas, "normals": normals}
 DATA_DIR    = ROOT / "data"
 RESULTS_DIR = ROOT / "results"
 
@@ -56,7 +87,12 @@ def load_sweep_csv(csv_path: Path) -> list[dict]:
     rows = []
     with open(csv_path, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
-    return [{k: float(v) for k, v in r.items()} for r in rows]
+    def _cast(v):
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return v
+    return [{k: _cast(v) for k, v in r.items()} for r in rows]
 
 
 def face_cp_to_vertex_cp(vertices: np.ndarray, faces: np.ndarray,
@@ -99,21 +135,149 @@ def _ji(arr) -> str:
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# Pre-cómputo interactivo: Cp maps para todos los selectores
+# ════════════════════════════════════════════════════════════════════════════
+
+def _wind_axes(alpha_deg):
+    a  = np.deg2rad(alpha_deg)
+    eD = np.array([0., -np.cos(a), -np.sin(a)])
+    eD /= np.linalg.norm(eD)
+    eM = np.array([1., 0., 0.])
+    eL = np.cross(eM, eD); eL /= np.linalg.norm(eL)
+    return eD, eL, eM
+
+
+def _capsule_refs(mesh, geom):
+    extents = np.asarray(mesh.extents, dtype=float)
+    centers, areas = geom["centers"], geom["areas"]
+    S_ref = float(extents[0] * extents[2])
+    L_ref = float(extents[1])
+    r_ref = np.average(centers, axis=0, weights=areas)
+    return S_ref, L_ref, r_ref
+
+
+def compute_interactive_data(
+    mesh_paths: dict[str, Path],
+    alphas:     list[float],
+    machs:      list[float],
+    gamma:      float = 1.4,
+) -> tuple[dict, dict]:
+    """
+    Pre-computa geometría y Cp maps para todos los selectores.
+
+    Returns
+    -------
+    geom_db : {name: {verts, faces}}
+    cp_db   : {name: {model: {alpha_str: {mach_str: {cp, CD, CL, CM}}}}}
+    """
+    if not _SOLVER_OK:
+        return {}, {}
+
+    geom_db = {}
+    cp_db   = {}
+
+    for name, path in mesh_paths.items():
+        if not Path(path).exists():
+            print(f"  [SKIP] {name} — STL no encontrado")
+            continue
+        print(f"  Precomputando {name}...")
+        mesh = _stl_load(path)
+        geom = _face_geom(mesh)
+        c, a, n = geom["centers"], geom["areas"], geom["normals"]
+        S, L, r = _capsule_refs(mesh, geom)
+        verts = np.asarray(mesh.vertices, dtype=float)
+        faces = np.asarray(mesh.faces,    dtype=int)
+
+        geom_db[name] = {"verts": verts, "faces": faces}
+        cp_db[name]   = {"MN": {}, "MNM": {}}
+
+        for alpha in alphas:
+            eD, eL, eM = _wind_axes(alpha)
+            ak = str(int(alpha))
+
+            # MN (no depende de Mach)
+            res = _solve_mn(
+                centers=c, areas=a, normals=n, alpha_deg=alpha,
+                S_ref=S, L_ref=L, r_ref=r, eD=eD, eL=eL, eM=eM,
+            )
+            vcp = face_cp_to_vertex_cp(verts, faces, res["cp"])
+            cp_db[name]["MN"].setdefault(ak, {})["8"] = {
+                "cp": vcp, "CD": res["CD"], "CL": res["CL"], "CM": res["CM"],
+            }
+
+            # MNM (depende de Mach)
+            cp_db[name]["MNM"].setdefault(ak, {})
+            for mach in machs:
+                res = _solve_mnm(
+                    centers=c, areas=a, normals=n, alpha_deg=alpha, Mach=mach,
+                    S_ref=S, L_ref=L, r_ref=r, eD=eD, eL=eL, eM=eM, gamma=gamma,
+                )
+                vcp = face_cp_to_vertex_cp(verts, faces, res["cp"])
+                mk  = str(int(mach))
+                cp_db[name]["MNM"][ak][mk] = {
+                    "cp": vcp, "CD": res["CD"], "CL": res["CL"], "CM": res["CM"],
+                }
+
+    return geom_db, cp_db
+
+
+def _serialize_cp_db(geom_db: dict, cp_db: dict) -> str:
+    """Serializa geom_db y cp_db a literales JS."""
+    geom_js_parts = []
+    for name, g in geom_db.items():
+        v, f = g["verts"], g["faces"]
+        geom_js_parts.append(
+            f'"{name}":{{'
+            f'x:{_jf(v[:,0])},y:{_jf(v[:,1])},z:{_jf(v[:,2])},'
+            f'i:{_ji(f[:,0])},j:{_ji(f[:,1])},k:{_ji(f[:,2])},'
+            f'n:{len(f)}}}'
+        )
+    geom_js = "{" + ",".join(geom_js_parts) + "}"
+
+    cp_js_parts = []
+    for name, models in cp_db.items():
+        model_parts = []
+        for model, alphas_d in models.items():
+            alpha_parts = []
+            for ak, machs_d in alphas_d.items():
+                mach_parts = []
+                for mk, vals in machs_d.items():
+                    cp_arr = _jf(vals["cp"], precision=3)
+                    mach_parts.append(
+                        f'"{mk}":{{'
+                        f'cp:{cp_arr},'
+                        f'CD:{vals["CD"]:.6f},'
+                        f'CL:{vals["CL"]:.6f},'
+                        f'CM:{vals["CM"]:.6f}}}'
+                    )
+                alpha_parts.append(f'"{ak}":{{{",".join(mach_parts)}}}')
+            model_parts.append(f'"{model}":{{{",".join(alpha_parts)}}}')
+        cp_js_parts.append(f'"{name}":{{{",".join(model_parts)}}}')
+    cp_js = "{" + ",".join(cp_js_parts) + "}"
+
+    return geom_js, cp_js
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # Generación del HTML
 # ════════════════════════════════════════════════════════════════════════════
 
 def generate_3d_html(
-    results_json: Path | None = None,
-    cp_csv: Path | None = None,
-    stl_capsule: Path | None = None,
-    stl_sphere: Path | None = None,
-    out_path: Path | None = None,
+    results_json:  Path | None = None,
+    cp_csv:        Path | None = None,
+    stl_capsule:   Path | None = None,
+    stl_sphere:    Path | None = None,
+    stl_coarse:    Path | None = None,   # malla gruesa para tab Malla
+    mesh_sens_csv: Path | None = None,   # results_mesh_sensitivity.csv
+    out_path:      Path | None = None,
 ) -> Path:
     # ── Rutas por defecto ────────────────────────────────────────────────────
     results_json = results_json or RESULTS_DIR / "results.json"
     cp_csv       = cp_csv       or RESULTS_DIR / "cp_faces_mnm_a20_M8.csv"
     stl_capsule  = stl_capsule  or DATA_DIR   / "Capsula" / "PruebaARD3.stl"
     stl_sphere   = stl_sphere   or DATA_DIR   / "esfera.stl"
+    stl_coarse   = stl_coarse   or DATA_DIR   / "Capsula" / "PruebaARD.stl"
+    mesh_sens_csv = mesh_sens_csv or RESULTS_DIR / "results_mesh_sensitivity.csv"
     out_path     = out_path     or RESULTS_DIR / "report_3d.html"
 
     # ── Carga ────────────────────────────────────────────────────────────────
@@ -124,65 +288,107 @@ def generate_3d_html(
     ref    = results["reference"]
     team   = results["team"]
 
-    print("  Cargando STL cápsula...")
+    print("  Cargando STL capsula (media)...")
     verts_cap, faces_cap = load_stl_mesh(stl_capsule)
-    print(f"    {len(verts_cap)} vértices, {len(faces_cap)} caras")
+    print(f"    {len(verts_cap)} vertices, {len(faces_cap)} caras")
 
     print("  Cargando STL esfera...")
     verts_sph, faces_sph = load_stl_mesh(stl_sphere)
-    print(f"    {len(verts_sph)} vértices, {len(faces_sph)} caras")
+    print(f"    {len(verts_sph)} vertices, {len(faces_sph)} caras")
 
     print("  Cargando Cp CSV...")
     face_cp = load_cp_csv(cp_csv)
     vertex_cp_cap = face_cp_to_vertex_cp(verts_cap, faces_cap, face_cp)
     print(f"    Cp = [{face_cp.min():.4f}, {face_cp.max():.4f}]")
 
-    # ── Sweep CSVs (opcionales) ──────────────────────────────────────────────
+    # ── Malla gruesa para comparativa ────────────────────────────────────────
+    has_coarse = stl_coarse is not None and Path(stl_coarse).exists()
+    if has_coarse:
+        print(f"  Cargando STL gruesa ({stl_coarse.name})...")
+        verts_co, faces_co = load_stl_mesh(stl_coarse)
+        print(f"    {len(verts_co)} vertices, {len(faces_co)} caras")
+        cox = _jf(verts_co[:, 0]); coy = _jf(verts_co[:, 1]); coz = _jf(verts_co[:, 2])
+        coi = _ji(faces_co[:, 0]); coj = _ji(faces_co[:, 1]); cok = _ji(faces_co[:, 2])
+        coarse_name = stl_coarse.name
+        n_coarse    = len(faces_co)
+    else:
+        cox = coy = coz = coi = coj = cok = "[]"
+        coarse_name = "—"; n_coarse = 0
+
+    # ── Sweep CSVs ───────────────────────────────────────────────────────────
     sweep_mnm, sweep_mn, sweep_mach = [], [], []
     for path, store in [
-        (RESULTS_DIR / "results_mnm_M8.csv",          "mnm"),
-        (RESULTS_DIR / "results_mn.csv",               "mn"),
-        (RESULTS_DIR / "results_mnm_mach_sweep.csv",  "mach"),
+        (RESULTS_DIR / "results_mnm_M8.csv",         "mnm"),
+        (RESULTS_DIR / "results_mn.csv",              "mn"),
+        (RESULTS_DIR / "results_mnm_mach_sweep.csv", "mach"),
     ]:
         if path.exists():
             data = load_sweep_csv(path)
-            if store == "mnm":   sweep_mnm  = data
-            elif store == "mn":  sweep_mn   = data
-            else:                sweep_mach = data
+            if store == "mnm":  sweep_mnm  = data
+            elif store == "mn": sweep_mn   = data
+            else:               sweep_mach = data
+
+    # ── Mesh sensitivity CSV ─────────────────────────────────────────────────
+    mesh_rows = []
+    if Path(mesh_sens_csv).exists():
+        mesh_rows = load_sweep_csv(mesh_sens_csv)
+    # Separate by model
+    mesh_mn  = sorted([r for r in mesh_rows if r.get("model") == "MN"],
+                       key=lambda r: r["n_faces"])
+    mesh_mnm = sorted([r for r in mesh_rows if r.get("model") == "MNM"],
+                       key=lambda r: r["n_faces"])
+
+    def _mesh_series(rows):
+        return {
+            "n":   json.dumps([int(r["n_faces"]) for r in rows]),
+            "CD":  json.dumps([r["CD"] for r in rows]),
+            "CL":  json.dumps([r["CL"] for r in rows]),
+            "CM":  json.dumps([r["CM"] for r in rows]),
+            "lbl": json.dumps([f"{r.get('stl','')}\n({int(r['n_faces'])} caras)" for r in rows]),
+        }
+
+    ms_mn  = _mesh_series(mesh_mn)
+    ms_mnm = _mesh_series(mesh_mnm)
 
     # ── Analítico cp_max vs Mach ─────────────────────────────────────────────
-    mach_pts    = [2, 4, 6, 8, 10, 12, 15, 20, 30, 50]
-    cpmax_pts   = [round(cpmax_analytic(m), 5) for m in mach_pts]
-    cd_mnm_pts  = [round(cpmax_analytic(m) / 2, 5) for m in mach_pts]
+    mach_pts   = [2, 4, 6, 8, 10, 12, 15, 20, 30, 50]
+    cpmax_pts  = [round(cpmax_analytic(m), 5) for m in mach_pts]
+    cd_mnm_pts = [round(cpmax_analytic(m) / 2, 5) for m in mach_pts]
 
-    # ── Serialización de geometrías ──────────────────────────────────────────
-    cx = _jf(verts_cap[:, 0])
-    cy = _jf(verts_cap[:, 1])
-    cz = _jf(verts_cap[:, 2])
-    ci = _ji(faces_cap[:, 0])
-    cj = _ji(faces_cap[:, 1])
-    ck = _ji(faces_cap[:, 2])
+    # ── Pre-cómputo interactivo ───────────────────────────────────────────────
+    _INTERACTIVE_ALPHAS = [0.0, 10.0, 20.0, 30.0]
+    _INTERACTIVE_MACHS  = [2.0, 4.0, 8.0, 12.0, 15.0, 20.0]
+    _INTERACTIVE_MESHES = {
+        "PruebaARD":  DATA_DIR / "Capsula" / "PruebaARD.stl",
+        "PruebaARD3": DATA_DIR / "Capsula" / "PruebaARD3.stl",
+        "PruebaARD4": DATA_DIR / "Capsula" / "PruebaARD4.stl",
+    }
+    print("\nPre-computando Cp interactivos...")
+    geom_db, cp_db = compute_interactive_data(
+        _INTERACTIVE_MESHES, _INTERACTIVE_ALPHAS, _INTERACTIVE_MACHS
+    )
+    geom_js_str, cp_db_js_str = _serialize_cp_db(geom_db, cp_db)
+    interactive_mesh_names = json.dumps(list(geom_db.keys()))
+    print("  Hecho.")
+
+    # ── Serialización geometrías ─────────────────────────────────────────────
+    cx = _jf(verts_cap[:, 0]); cy = _jf(verts_cap[:, 1]); cz = _jf(verts_cap[:, 2])
+    ci = _ji(faces_cap[:, 0]); cj = _ji(faces_cap[:, 1]); ck = _ji(faces_cap[:, 2])
     cp_js = _jf(vertex_cp_cap, precision=5)
 
-    sx = _jf(verts_sph[:, 0])
-    sy = _jf(verts_sph[:, 1])
-    sz = _jf(verts_sph[:, 2])
-    si = _ji(faces_sph[:, 0])
-    sj = _ji(faces_sph[:, 1])
-    sk = _ji(faces_sph[:, 2])
+    sx = _jf(verts_sph[:, 0]); sy = _jf(verts_sph[:, 1]); sz = _jf(verts_sph[:, 2])
+    si = _ji(faces_sph[:, 0]); sj = _ji(faces_sph[:, 1]); sk = _ji(faces_sph[:, 2])
 
     # ── Sweep data para gráficas ─────────────────────────────────────────────
-    def _sweep_json(rows, key_x, key_y):
-        xs = [r[key_x] for r in rows if key_x in r]
-        ys = [r[key_y] for r in rows if key_y in r]
-        return json.dumps(xs), json.dumps(ys)
+    def _sw(rows, kx, ky):
+        return json.dumps([r[kx] for r in rows if kx in r]), \
+               json.dumps([r[ky] for r in rows if ky in r])
 
-    mnm_alphas, mnm_CD = _sweep_json(sweep_mnm, "alpha_deg", "CD")
-    mnm_alphas, mnm_CL = _sweep_json(sweep_mnm, "alpha_deg", "CL")
-    mnm_alphas, mnm_CM = _sweep_json(sweep_mnm, "alpha_deg", "CM")
-    mn_alphas,  mn_CD  = _sweep_json(sweep_mn,  "alpha_deg", "CD")
-
-    mach_sweep_x, mach_sweep_cd = _sweep_json(sweep_mach, "Mach", "CD")
+    mnm_alphas, mnm_CD = _sw(sweep_mnm, "alpha_deg", "CD")
+    mnm_alphas, mnm_CL = _sw(sweep_mnm, "alpha_deg", "CL")
+    mnm_alphas, mnm_CM = _sw(sweep_mnm, "alpha_deg", "CM")
+    mn_alphas,  mn_CD  = _sw(sweep_mn,  "alpha_deg", "CD")
+    mach_sweep_x, mach_sweep_cd = _sw(sweep_mach, "Mach", "CD")
 
     # ── Metadata ─────────────────────────────────────────────────────────────
     group_str   = team.get("group_id", "GXX")
@@ -195,15 +401,10 @@ def generate_3d_html(
     n_tri_sph   = next((c["triangles"] for c in cases if "sphere"  in c["case_id"]), "—")
 
     js_cases = json.dumps([{
-        "id":    c["case_id"],
-        "geo":   c["geometry_name"],
-        "model": c["model"],
-        "M":     c["Mach"],
-        "a":     c["alpha_deg"],
-        "CD":    c["CD"],
-        "CL":    c["CL"],
-        "CM":    c["CM"],
-        "nw":    c.get("_n_windward", 0),
+        "id": c["case_id"], "geo": c["geometry_name"], "model": c["model"],
+        "M": c["Mach"], "a": c["alpha_deg"],
+        "CD": c["CD"], "CL": c["CL"], "CM": c["CM"],
+        "nw": c.get("_n_windward", 0),
     } for c in cases])
 
     checks_data = _build_checks(cases)
@@ -215,12 +416,24 @@ def generate_3d_html(
         n_tri_cap=n_tri_cap, n_tri_sph=n_tri_sph,
         cx=cx, cy=cy, cz=cz, ci=ci, cj=cj, ck=ck, cp_js=cp_js,
         sx=sx, sy=sy, sz=sz, si=si, sj=sj, sk=sk,
-        mach_pts=json.dumps(mach_pts),
-        cpmax_pts=json.dumps(cpmax_pts),
+        cox=cox, coy=coy, coz=coz, coi=coi, coj=coj, cok=cok,
+        coarse_name=coarse_name, n_coarse=n_coarse,
+        n_fine=len(faces_cap),
+        mach_pts=json.dumps(mach_pts), cpmax_pts=json.dumps(cpmax_pts),
         cd_mnm_pts=json.dumps(cd_mnm_pts),
         mnm_alphas=mnm_alphas, mnm_CD=mnm_CD, mnm_CL=mnm_CL, mnm_CM=mnm_CM,
         mn_alphas=mn_alphas, mn_CD=mn_CD,
         mach_sweep_x=mach_sweep_x, mach_sweep_cd=mach_sweep_cd,
+        ms_mn_n=ms_mn["n"],   ms_mn_CD=ms_mn["CD"],   ms_mn_CL=ms_mn["CL"],
+        ms_mn_CM=ms_mn["CM"], ms_mn_lbl=ms_mn["lbl"],
+        ms_mnm_n=ms_mnm["n"], ms_mnm_CD=ms_mnm["CD"], ms_mnm_CL=ms_mnm["CL"],
+        ms_mnm_CM=ms_mnm["CM"], ms_mnm_lbl=ms_mnm["lbl"],
+        mesh_alpha_label=f"{mesh_rows[0]['alpha_deg']:.0f}°" if mesh_rows else "?",
+        geom_db_js=geom_js_str,
+        cp_db_js=cp_db_js_str,
+        interactive_mesh_names=interactive_mesh_names,
+        interactive_alphas=json.dumps([int(a) for a in _INTERACTIVE_ALPHAS]),
+        interactive_machs=json.dumps([int(m) for m in _INTERACTIVE_MACHS]),
         js_cases=js_cases,
         checks_data=json.dumps(checks_data),
     )
@@ -311,7 +524,7 @@ def _html_template(**d) -> str:
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>AAVFR TP1 — Informe 3D Interactivo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
 :root{{
@@ -322,8 +535,8 @@ def _html_template(**d) -> str:
 }}
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
 html{{scroll-behavior:smooth}}
-body{{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;
-  min-height:100vh;overflow-x:hidden}}
+body{{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;
+  font-weight:400;min-height:100vh;overflow-x:hidden}}
 
 /* grid bg */
 body::after{{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -355,12 +568,12 @@ header{{padding:56px 0 40px;border-bottom:1px solid var(--border)}}
   font-size:9.5px;font-weight:700;letter-spacing:.12em;padding:4px 10px;
   border-radius:3px;flex-shrink:0;margin-bottom:auto}}
 .htitle{{flex:1;min-width:200px}}
-.htitle h1{{font-size:clamp(1.9rem,4vw,3rem);font-weight:800;line-height:1.05;letter-spacing:-.02em}}
+.htitle h1{{font-size:clamp(1.9rem,4vw,3rem);font-weight:700;line-height:1.1;letter-spacing:-.01em}}
 .htitle h1 em{{color:var(--accent);font-style:normal}}
 .htitle p{{margin-top:8px;font-family:'Space Mono',monospace;font-size:10px;
   color:var(--muted);letter-spacing:.06em}}
 .hstats{{display:flex;gap:28px;flex-shrink:0}}
-.stat .sv{{display:block;font-size:2rem;font-weight:800;color:var(--accent);line-height:1}}
+.stat .sv{{display:block;font-size:2rem;font-weight:700;color:var(--accent);line-height:1}}
 .stat .sl{{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em}}
 
 /* ── Sections ── */
@@ -370,7 +583,7 @@ header{{padding:56px 0 40px;border-bottom:1px solid var(--border)}}
 .shead{{display:flex;align-items:center;gap:14px;margin-bottom:24px}}
 .snum{{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);
   border:1px solid var(--accent);padding:3px 8px;border-radius:2px;letter-spacing:.1em}}
-.shead h2{{font-size:1.25rem;font-weight:800}}
+.shead h2{{font-size:1.25rem;font-weight:600}}
 .sline{{flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}}
 
 /* ── 3D viewer panel ── */
@@ -379,12 +592,12 @@ header{{padding:56px 0 40px;border-bottom:1px solid var(--border)}}
 .plot3d{{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   overflow:hidden;height:560px}}
 .info-panel{{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px}}
-.info-panel h3{{font-size:.9rem;font-weight:800;margin-bottom:4px}}
+.info-panel h3{{font-size:.9rem;font-weight:600;margin-bottom:4px}}
 .info-sub{{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
   letter-spacing:.06em;margin-bottom:18px}}
 .kv{{margin-bottom:12px}}
 .kv .k{{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.07em}}
-.kv .v{{font-size:1.4rem;font-weight:800;line-height:1.1;margin-top:2px}}
+.kv .v{{font-size:1.4rem;font-weight:600;line-height:1.1;margin-top:2px}}
 .kv .v.cd{{color:var(--accent2)}}.kv .v.cl{{color:var(--accent)}}.kv .v.cm{{color:var(--accent3)}}
 .divider{{height:1px;background:var(--border);margin:16px 0}}
 .legend-item{{display:flex;align-items:center;gap:8px;margin-bottom:8px;
@@ -398,7 +611,7 @@ header{{padding:56px 0 40px;border-bottom:1px solid var(--border)}}
 @media(max-width:720px){{.charts-grid{{grid-template-columns:1fr}}}}
 .chart-box{{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   overflow:hidden}}
-.chart-box h3{{padding:16px 18px 4px;font-size:.88rem;font-weight:700}}
+.chart-box h3{{padding:16px 18px 4px;font-size:.95rem;font-weight:600}}
 .chart-sub{{padding:0 18px 12px;font-family:'Space Mono',monospace;font-size:9px;
   color:var(--muted);letter-spacing:.05em}}
 .plotly-chart{{height:300px}}
@@ -448,6 +661,31 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
   padding:2px 7px;border-radius:2px;font-weight:700}}
 .tag.MN{{background:#3de8b018;color:var(--accent);border:1px solid var(--accent)}}
 .tag.MNM{{background:#e8504018;color:var(--accent2);border:1px solid var(--accent2)}}
+
+/* ── Selector bar ── */
+.sel-bar{{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  padding:12px 16px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;margin-bottom:14px}}
+.sel-group{{display:flex;flex-direction:column;gap:3px}}
+.sel-label{{font-family:'Space Mono',monospace;font-size:8.5px;color:var(--muted);
+  letter-spacing:.08em}}
+.sel-bar select{{background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  font-family:'Space Mono',monospace;font-size:10px;padding:5px 10px;border-radius:5px;
+  cursor:pointer;outline:none;min-width:120px}}
+.sel-bar select:hover{{border-color:var(--accent)}}
+.sel-bar select:focus{{border-color:var(--accent);box-shadow:0 0 0 2px #3de8b025}}
+.sel-bar select option{{background:var(--bg3)}}
+
+/* ── Metric pills ── */
+.metrics-row{{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}}
+.metric-pill{{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:10px 18px;flex:1;min-width:90px;text-align:center}}
+.metric-pill .mp-label{{font-family:'Space Mono',monospace;font-size:8.5px;color:var(--muted);letter-spacing:.1em}}
+.metric-pill .mp-val{{font-size:1.5rem;font-weight:600;line-height:1.15;margin-top:2px}}
+.metric-pill.mpcd .mp-val{{color:var(--accent2)}}
+.metric-pill.mpcl .mp-val{{color:var(--accent)}}
+.metric-pill.mpcm .mp-val{{color:var(--accent3)}}
+.metric-pill.mpn  .mp-val{{color:var(--accent4);font-size:1.1rem}}
 </style>
 </head>
 <body>
@@ -457,6 +695,7 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="showTab('tab-capsule',this)">3D Cápsula Cp</button>
     <button class="tab-btn" onclick="showTab('tab-sphere',this)">3D Esfera</button>
+    <button class="tab-btn" onclick="showTab('tab-mesh',this)">Sensibilidad Malla</button>
     <button class="tab-btn" onclick="showTab('tab-charts',this)">Gráficas</button>
     <button class="tab-btn" onclick="showTab('tab-table',this)">Resultados</button>
     <button class="tab-btn" onclick="showTab('tab-ref',this)">Referencias</button>
@@ -485,28 +724,72 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
 <!-- ═══════════════════ TAB: 3D CÁPSULA ═══════════════════ -->
 <div class="section active" id="tab-capsule">
   <div class="shead"><span class="snum">01</span><h2>Visualización 3D — Cápsula ARD</h2><div class="sline"></div></div>
-  <div class="viewer-wrap">
-    <div class="plot3d" id="plot-capsule"></div>
-    <div class="info-panel">
-      <h3>Distribución de Cp</h3>
-      <div class="info-sub">MNM · α = 20° · M∞ = 8</div>
-      <div class="kv"><div class="k">CD</div>
-        <div class="v cd" id="info-cd">—</div></div>
-      <div class="kv"><div class="k">CL</div>
-        <div class="v cl" id="info-cl">—</div></div>
-      <div class="kv"><div class="k">CM</div>
-        <div class="v cm" id="info-cm">—</div></div>
-      <div class="divider"></div>
-      <div class="kv"><div class="k">TRIÁNGULOS</div>
-        <div class="v">{d['n_tri_cap']}</div></div>
-      <div class="kv"><div class="k">S_ref</div>
-        <div class="v">{d['sref_val']:.4f} m²</div></div>
-      <div class="kv"><div class="k">L_ref</div>
-        <div class="v">{d['lref_val']:.4f} m</div></div>
-      <div class="divider"></div>
-      <div class="legend-item">
-        <div class="legend-color" style="background:linear-gradient(90deg,#440154,#21908c,#fde725)"></div>
-        <span>Cp: Viridis (bajo → alto)</span>
+
+  <!-- Selector bar -->
+  <div class="sel-bar">
+    <div class="sel-group">
+      <span class="sel-label">MALLA</span>
+      <select id="sel-mesh" onchange="updateCapsule()"></select>
+    </div>
+    <div class="sel-group">
+      <span class="sel-label">MÉTODO</span>
+      <select id="sel-model" onchange="updateCapsule()">
+        <option value="MNM">MNM — Newton Modificado</option>
+        <option value="MN">MN — Newton</option>
+      </select>
+    </div>
+    <div class="sel-group">
+      <span class="sel-label">ÁNGULO α (°)</span>
+      <select id="sel-alpha" onchange="updateCapsule()"></select>
+    </div>
+    <div class="sel-group">
+      <span class="sel-label">MACH M∞</span>
+      <select id="sel-mach" onchange="updateCapsule()"></select>
+    </div>
+  </div>
+
+  <!-- 3D plot full-width -->
+  <div class="plot3d" id="plot-capsule" style="height:580px;border-radius:10px"></div>
+
+  <!-- Métricas dinámicas -->
+  <div class="metrics-row">
+    <div class="metric-pill mpcd">
+      <div class="mp-label">CD</div>
+      <div class="mp-val" id="mp-cd">—</div>
+    </div>
+    <div class="metric-pill mpcl">
+      <div class="mp-label">CL</div>
+      <div class="mp-val" id="mp-cl">—</div>
+    </div>
+    <div class="metric-pill mpcm">
+      <div class="mp-label">CM</div>
+      <div class="mp-val" id="mp-cm">—</div>
+    </div>
+    <div class="metric-pill mpn">
+      <div class="mp-label">CARAS</div>
+      <div class="mp-val" id="mp-n">—</div>
+    </div>
+    <div class="metric-pill" style="border-color:var(--muted)">
+      <div class="mp-label">S_ref</div>
+      <div class="mp-val" style="color:var(--text);font-size:1rem">{d['sref_val']:.4f} m²</div>
+    </div>
+    <div class="metric-pill" style="border-color:var(--muted)">
+      <div class="mp-label">L_ref</div>
+      <div class="mp-val" style="color:var(--text);font-size:1rem">{d['lref_val']:.4f} m</div>
+    </div>
+  </div>
+
+  <!-- compat: info-panel ids aún usados en código anterior -->
+  <span id="info-cd" style="display:none"></span>
+  <span id="info-cl" style="display:none"></span>
+  <span id="info-cm" style="display:none"></span>
+
+  <!-- legend kept for reference -->
+  <div style="display:flex;align-items:center;gap:8px;margin-top:12px;
+    font-family:'Space Mono',monospace;font-size:8.5px;color:var(--muted)">
+    <div style="width:80px;height:8px;border-radius:2px;
+      background:linear-gradient(90deg,#440154,#21908c,#fde725)"></div>
+    <span>Cp — Viridis: mínimo → máximo</span>
       </div>
       <div class="tip">
         🖱 Arrastra para rotar<br>
@@ -550,9 +833,49 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
 </div>
 
 
+<!-- ═══════════════════ TAB: MALLA ═══════════════════ -->
+<div class="section" id="tab-mesh">
+  <div class="shead"><span class="snum">03</span><h2>Sensibilidad de Malla</h2><div class="sline"></div></div>
+
+  <!-- Convergencia -->
+  <div class="charts-grid" style="margin-bottom:20px">
+    <div class="chart-box">
+      <h3>Convergencia CD — MN vs MNM</h3>
+      <div class="chart-sub">CD vs N° triángulos · α={d['mesh_alpha_label']} · M=8</div>
+      <div class="plotly-chart" id="mesh-ch-cd"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Convergencia CL y CM — MN vs MNM</h3>
+      <div class="chart-sub">CL / CM vs N° triángulos · α={d['mesh_alpha_label']} · M=8</div>
+      <div class="plotly-chart" id="mesh-ch-cl"></div>
+    </div>
+  </div>
+
+  <!-- Comparativa 3D coarse vs medium -->
+  <div class="shead" style="margin-top:40px"><span class="snum" style="border-color:var(--accent4);color:var(--accent4)">3D</span>
+    <h2>Comparativa geométrica: malla gruesa vs media</h2><div class="sline"></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
+        margin-bottom:8px;padding-left:4px">
+        MALLA GRUESA — {d['coarse_name']} · {d['n_coarse']} caras
+      </div>
+      <div class="plot3d" id="plot-coarse" style="height:440px"></div>
+    </div>
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
+        margin-bottom:8px;padding-left:4px">
+        MALLA MEDIA — PruebaARD3.stl · {d['n_fine']} caras
+      </div>
+      <div class="plot3d" id="plot-fine" style="height:440px"></div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ═══════════════════ TAB: GRÁFICAS ═══════════════════ -->
 <div class="section" id="tab-charts">
-  <div class="shead"><span class="snum">03</span><h2>Análisis Gráfico Interactivo</h2><div class="sline"></div></div>
+  <div class="shead"><span class="snum">04</span><h2>Análisis Gráfico Interactivo</h2><div class="sline"></div></div>
   <div class="charts-grid">
 
     <div class="chart-box">
@@ -585,7 +908,7 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
 
 <!-- ═══════════════════ TAB: TABLA ═══════════════════ -->
 <div class="section" id="tab-table">
-  <div class="shead"><span class="snum">04</span><h2>Tabla de Resultados</h2><div class="sline"></div></div>
+  <div class="shead"><span class="snum">05</span><h2>Tabla de Resultados</h2><div class="sline"></div></div>
   <div class="tw">
     <table id="results-table">
       <thead><tr>
@@ -607,7 +930,7 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
 
 <!-- ═══════════════════ TAB: REFERENCIAS ═══════════════════ -->
 <div class="section" id="tab-ref">
-  <div class="shead"><span class="snum">05</span><h2>Convenciones y Referencias</h2><div class="sline"></div></div>
+  <div class="shead"><span class="snum">06</span><h2>Convenciones y Referencias</h2><div class="sline"></div></div>
   <div class="refbox">
     <p>Sistema de referencia <strong>STL body frame</strong>: x lateral · y axial (morro en y_min) · z vertical. Unidades: mm.<br>
     α &gt; 0 inclina el flujo hacia −z (morro arriba). V∞ = [0, −cos α, −sin α].<br>
@@ -626,7 +949,7 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
 
 <!-- ═══════════════════ TAB: CHECKS ═══════════════════ -->
 <div class="section" id="tab-checks">
-  <div class="shead"><span class="snum">06</span><h2>Pruebas de Coherencia C1–C6</h2><div class="sline"></div></div>
+  <div class="shead"><span class="snum">07</span><h2>Pruebas de Coherencia C1–C6</h2><div class="sline"></div></div>
   <div class="checks-grid" id="checks-grid"></div>
 </div>
 
@@ -657,6 +980,18 @@ const MACH_X={d['mach_sweep_x']}, MACH_CD={d['mach_sweep_cd']};
 
 const CASES={d['js_cases']};
 const CHECKS={d['checks_data']};
+
+// ── Base de datos interactiva ─────────────────────────────────────────────────
+const GEOM_DB={d['geom_db_js']};
+const CP_DB={d['cp_db_js']};
+const IMESH_NAMES={d['interactive_mesh_names']};
+const IALPHAS={d['interactive_alphas']};
+const IMACHS={d['interactive_machs']};
+
+// ── Malla ────────────────────────────────────────────────────────────────────
+const MS_MN_N={d['ms_mn_n']},  MS_MN_CD={d['ms_mn_CD']},  MS_MN_CL={d['ms_mn_CL']},  MS_MN_CM={d['ms_mn_CM']},  MS_MN_LBL={d['ms_mn_lbl']};
+const MS_MNM_N={d['ms_mnm_n']},MS_MNM_CD={d['ms_mnm_CD']},MS_MNM_CL={d['ms_mnm_CL']},MS_MNM_CM={d['ms_mnm_CM']},MS_MNM_LBL={d['ms_mnm_lbl']};
+const CO_X={d['cox']},CO_Y={d['coy']},CO_Z={d['coz']},CO_I={d['coi']},CO_J={d['coj']},CO_K={d['cok']};
 
 // ── Plotly layout helpers ───────────────────────────────────────────────────
 const BG    = '#0f1220';
@@ -711,40 +1046,93 @@ function showTab(id, btn) {{
 }}
 
 function renderTab(id) {{
-  if (id === 'tab-sphere')  renderSphere();
-  if (id === 'tab-charts')  renderCharts();
+  if (id === 'tab-sphere') renderSphere();
+  if (id === 'tab-mesh')   renderMesh();
+  if (id === 'tab-charts') renderCharts();
 }}
 
 // ── 3D Cápsula (render inmediato) ───────────────────────────────────────────
 function renderCapsule() {{
+  // Populate selectors on first render
+  const meshSel  = document.getElementById('sel-mesh');
+  const alphaSel = document.getElementById('sel-alpha');
+  const machSel  = document.getElementById('sel-mach');
+
+  if (meshSel.options.length === 0) {{
+    IMESH_NAMES.forEach(n => {{
+      const o = document.createElement('option');
+      o.value = n; o.textContent = n;
+      if (n === 'PruebaARD3') o.selected = true;
+      meshSel.appendChild(o);
+    }});
+    IALPHAS.forEach(a => {{
+      const o = document.createElement('option');
+      o.value = a; o.textContent = a + '°';
+      if (a === 20) o.selected = true;
+      alphaSel.appendChild(o);
+    }});
+    IMACHS.forEach(m => {{
+      const o = document.createElement('option');
+      o.value = m; o.textContent = 'M ' + m;
+      if (m === 8) o.selected = true;
+      machSel.appendChild(o);
+    }});
+  }}
+
+  updateCapsule();
+}}
+
+function updateCapsule() {{
+  const mesh  = document.getElementById('sel-mesh').value;
+  const model = document.getElementById('sel-model').value;
+  const alpha = document.getElementById('sel-alpha').value;
+  const mach  = document.getElementById('sel-mach').value;
+
+  // Disable Mach selector for MN (doesn't depend on Mach)
+  document.getElementById('sel-mach').disabled = (model === 'MN');
+
+  const g  = GEOM_DB[mesh];
+  if (!g) return;
+
+  const mk = (model === 'MN') ? '8' : String(mach);
+  const entry = CP_DB?.[mesh]?.[model]?.[String(alpha)]?.[mk];
+
   const trace = {{
     type: 'mesh3d',
-    x: CAP_X, y: CAP_Y, z: CAP_Z,
-    i: CAP_I, j: CAP_J, k: CAP_K,
-    intensity: CAP_CP,
-    colorscale: 'Viridis',
-    showscale: true,
+    x: g.x, y: g.y, z: g.z,
+    i: g.i, j: g.j, k: g.k,
+    intensity: entry ? entry.cp : null,
+    colorscale: 'Viridis', showscale: true,
     colorbar: {{
       title: {{text:'Cp', side:'right', font:{{size:9,color:MUTED}}}},
-      thickness: 14, len: 0.7,
-      tickfont: {{size:9, color:MUTED}},
-      outlinecolor: GRID,
-      bgcolor: BG,
+      thickness:14, len:0.7,
+      tickfont:{{size:9,color:MUTED}},
+      outlinecolor:GRID, bgcolor:BG,
     }},
     flatshading: false,
-    lighting: {{ambient:0.5, diffuse:0.7, specular:0.3, roughness:0.5}},
+    lighting: {{ambient:0.5,diffuse:0.7,specular:0.3,roughness:0.5}},
     lightposition: {{x:1000,y:-2000,z:2000}},
-    hovertemplate: 'x:%{{x:.1f}}<br>y:%{{y:.1f}}<br>z:%{{z:.1f}}<br>Cp:%{{intensity:.4f}}<extra></extra>',
+    hovertemplate:'x:%{{x:.1f}}<br>y:%{{y:.1f}}<br>z:%{{z:.1f}}<br>Cp:%{{intensity:.4f}}<extra></extra>',
   }};
-  Plotly.newPlot('plot-capsule', [trace], LAYOUT_3D('Cápsula ARD — Cp (MNM · α=20° · M=8)'), CFG);
 
-  // Fill info panel
-  const c = CASES.find(x => x.id === 'capsule_MNM_a20_M8');
-  if (c) {{
-    document.getElementById('info-cd').textContent = c.CD.toFixed(5);
-    document.getElementById('info-cl').textContent = c.CL.toFixed(5);
-    document.getElementById('info-cm').textContent = c.CM.toFixed(5);
+  const title = `${{mesh}} — ${{model}} · α=${{alpha}}° · M=${{mach}}`;
+  if (document.getElementById('plot-capsule').data) {{
+    Plotly.react('plot-capsule', [trace], LAYOUT_3D(title), CFG);
+  }} else {{
+    Plotly.newPlot('plot-capsule', [trace], LAYOUT_3D(title), CFG);
   }}
+
+  // Update metrics
+  if (entry) {{
+    document.getElementById('mp-cd').textContent = entry.CD.toFixed(5);
+    document.getElementById('mp-cl').textContent = entry.CL.toFixed(5);
+    document.getElementById('mp-cm').textContent = entry.CM.toFixed(5);
+  }} else {{
+    document.getElementById('mp-cd').textContent = '—';
+    document.getElementById('mp-cl').textContent = '—';
+    document.getElementById('mp-cm').textContent = '—';
+  }}
+  document.getElementById('mp-n').textContent = g.n ? g.n.toLocaleString() : '—';
 }}
 
 // ── 3D Esfera ───────────────────────────────────────────────────────────────
@@ -778,6 +1166,58 @@ function renderSphere() {{
   if (r1) document.getElementById('sph-cd-mn').textContent = r1.CD.toFixed(5);
   if (r2) document.getElementById('sph-cd-m2').textContent = r2.CD.toFixed(5);
   if (r3) document.getElementById('sph-cd-m8').textContent = r3.CD.toFixed(5);
+}}
+
+// ── Sensibilidad de malla ────────────────────────────────────────────────────
+function renderMesh() {{
+  // Convergencia CD
+  Plotly.newPlot('mesh-ch-cd', [
+    {{name:'CD MN',  x:MS_MN_N,  y:MS_MN_CD,  mode:'lines+markers',
+      text:MS_MN_LBL, hovertemplate:'%{{text}}<br>CD=%{{y:.5f}}<extra></extra>',
+      line:{{color:'#3de8b0',width:2.5}}, marker:{{size:8,symbol:'circle'}}}},
+    {{name:'CD MNM', x:MS_MNM_N, y:MS_MNM_CD, mode:'lines+markers',
+      text:MS_MNM_LBL,hovertemplate:'%{{text}}<br>CD=%{{y:.5f}}<extra></extra>',
+      line:{{color:'#e85040',width:2.5}}, marker:{{size:8,symbol:'diamond'}}}},
+  ], {{
+    ...LAYOUT_2D('N° triángulos','CD'),
+    xaxis:{{...LAYOUT_2D().xaxis, type:'log', title:{{text:'N° triángulos (log)',font:{{size:9,color:MUTED}}}}}},
+  }}, CFG);
+
+  // Convergencia CL y CM
+  Plotly.newPlot('mesh-ch-cl', [
+    {{name:'CL MN',  x:MS_MN_N,  y:MS_MN_CL,  mode:'lines+markers',
+      line:{{color:'#3de8b0',width:2.5,dash:'solid'}},  marker:{{size:8}}}},
+    {{name:'CL MNM', x:MS_MNM_N, y:MS_MNM_CL, mode:'lines+markers',
+      line:{{color:'#e85040',width:2.5,dash:'solid'}},  marker:{{size:8,symbol:'diamond'}}}},
+    {{name:'CM MN',  x:MS_MN_N,  y:MS_MN_CM,  mode:'lines+markers',
+      line:{{color:'#3de8b088',width:2,dash:'dot'}},    marker:{{size:6}}}},
+    {{name:'CM MNM', x:MS_MNM_N, y:MS_MNM_CM, mode:'lines+markers',
+      line:{{color:'#e8504088',width:2,dash:'dot'}},    marker:{{size:6,symbol:'diamond'}}}},
+  ], {{
+    ...LAYOUT_2D('N° triángulos',''),
+    xaxis:{{...LAYOUT_2D().xaxis, type:'log', title:{{text:'N° triángulos (log)',font:{{size:9,color:MUTED}}}}}},
+  }}, CFG);
+
+  // 3D coarse
+  const meshTrace = (x,y,z,i,j,k,col,title) => [{{
+    type:'mesh3d', x,y,z,i,j,k,
+    color:col, opacity:0.9, flatshading:true,
+    lighting:{{ambient:0.5,diffuse:0.7,specular:0.2}},
+    lightposition:{{x:500,y:-1500,z:2000}},
+    hovertemplate:'x:%{{x:.1f}}<br>y:%{{y:.1f}}<br>z:%{{z:.1f}}<extra></extra>',
+  }}];
+
+  const sceneLayout = (title) => ({{
+    ...LAYOUT_3D(title),
+    scene:{{...LAYOUT_3D(title).scene, camera:{{eye:{{x:1.6,y:-1.4,z:0.8}}}}}},
+  }});
+
+  if (CO_X.length) {{
+    Plotly.newPlot('plot-coarse', meshTrace(CO_X,CO_Y,CO_Z,CO_I,CO_J,CO_K,'#e8a030',''),
+      sceneLayout('Malla gruesa — {d['coarse_name']}'), CFG);
+  }}
+  Plotly.newPlot('plot-fine',   meshTrace(CAP_X,CAP_Y,CAP_Z,CAP_I,CAP_J,CAP_K,'#3de8b0',''),
+    sceneLayout('Malla media — PruebaARD3.stl'), CFG);
 }}
 
 // ── Charts ──────────────────────────────────────────────────────────────────

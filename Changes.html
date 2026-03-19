@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changes — Registro de cambios</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      background: #0f1117;
+      color: #d4d8e8;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 960px; margin: 0 auto; }
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: #60c8f0;
+      border-bottom: 2px solid #60c8f044;
+      padding-bottom: 0.6rem;
+      margin-bottom: 0.4rem;
+    }
+    .subtitle {
+      font-size: 0.93rem;
+      color: #8890aa;
+      margin-bottom: 2.5rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #80d8ff;
+      margin: 2.2rem 0 0.5rem;
+      border-bottom: 1px solid #1e2840;
+      padding-bottom: 0.3rem;
+    }
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #a0c8f0;
+      margin: 1.2rem 0 0.4rem;
+    }
+    .change-card {
+      background: #141720;
+      border: 1px solid #252a42;
+      border-left: 4px solid #3a80d0;
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1.2rem;
+    }
+    .change-card.fix  { border-left-color: #e07040; }
+    .change-card.new  { border-left-color: #50c890; }
+    .change-card.clean{ border-left-color: #a070d0; }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.15rem 0.55rem;
+      border-radius: 3px;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+    .badge.feat  { background: #1a3a60; color: #60c0ff; }
+    .badge.fix   { background: #3a2010; color: #f09050; }
+    .badge.new   { background: #0e3020; color: #50c890; }
+    .badge.clean { background: #2a1a40; color: #c090e0; }
+    .file-tag {
+      font-family: 'Courier New', monospace;
+      font-size: 0.83rem;
+      background: #0d1020;
+      color: #7ec8e3;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    p { margin-bottom: 0.6rem; }
+    ul { margin: 0.4rem 0 0.6rem 1.4rem; }
+    li { margin-bottom: 0.3rem; }
+    .code-block {
+      background: #0d1020;
+      border: 1px solid #1e2840;
+      border-radius: 5px;
+      padding: 0.8rem 1rem;
+      margin: 0.6rem 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      color: #c8d0e8;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .toc {
+      background: #141720;
+      border: 1px solid #252a42;
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .toc h2 { font-size: 1rem; margin: 0 0 0.6rem; border: none; }
+    .toc ol { margin-left: 1.2rem; }
+    .toc li { margin-bottom: 0.2rem; }
+    .toc a { color: #6090c0; text-decoration: none; }
+    .toc a:hover { color: #80b8e8; text-decoration: underline; }
+    .footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #505870;
+      margin-top: 3rem;
+      border-top: 1px solid #1e2135;
+      padding-top: 1rem;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin: 1rem 0 1.8rem;
+    }
+    .summary-table th {
+      background: #1e2438;
+      color: #8898c8;
+      font-weight: 600;
+      padding: 0.45rem 0.8rem;
+      border: 1px solid #252a42;
+      text-align: left;
+    }
+    .summary-table td {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid #1e2438;
+    }
+    .summary-table tr:nth-child(even) td { background: #12151f; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Changes — Registro de cambios</h1>
+  <p class="subtitle">
+    Historial completo de modificaciones aplicadas al proyecto TP1 de Aerodinámica.<br>
+    Grupo G5 – ARD &nbsp;|&nbsp; Fecha: 2026-03-17
+  </p>
+
+  <!-- ── Tabla resumen ── -->
+  <table class="summary-table">
+    <thead>
+      <tr><th>#</th><th>Fichero</th><th>Tipo</th><th>Descripción breve</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>C1</td><td>src/generate_3d_report.py</td><td>FEAT</td><td>HTML interactivo 3D — Plotly.js + viewer de Cp por malla/modelo/α/M</td></tr>
+      <tr><td>C2</td><td>src/generate_3d_report.py</td><td>FEAT</td><td>Tab de sensibilidad de malla con gráficas de convergencia</td></tr>
+      <tr><td>C3</td><td>src/generate_3d_report.py</td><td>FIX</td><td>Cambio de fuente Syne→Outfit (menos condensada)</td></tr>
+      <tr><td>C4</td><td>src/generate_3d_report.py</td><td>FIX</td><td>Importación MN/MNM directa (evita dependencia matplotlib de stl_utils)</td></tr>
+      <tr><td>C5</td><td>src/generate_3d_report.py</td><td>FIX</td><td>load_sweep_csv: _cast() para no fallar con columnas string (stl, model)</td></tr>
+      <tr><td>C6</td><td>src/main.py</td><td>FEAT</td><td>RUN_MESH_SENSITIVITY + loop por 4 STLs → results_mesh_sensitivity.csv</td></tr>
+      <tr><td>C7</td><td>src/main.py</td><td>FIX</td><td>STL_COARSE y STL_FINE asignados (antes eran None)</td></tr>
+      <tr><td>C8</td><td>src/main.py</td><td>FIX</td><td>stl_file: ruta relativa real desde ROOT (corrige data/Capsula/ faltante)</td></tr>
+      <tr><td>C9</td><td>results/results.json</td><td>FIX</td><td>stl_file capsule: data/PruebaARD*.stl → data/Capsula/PruebaARD*.stl</td></tr>
+      <tr><td>C10</td><td>run.py</td><td>NEW</td><td>Script de entrada en raíz del proyecto</td></tr>
+      <tr><td>C11</td><td>(varios CSV)</td><td>CLEAN</td><td>Ficheros CSV dispersos en raíz y src/ movidos a results/</td></tr>
+      <tr><td>C12</td><td>src/MNM.py</td><td>FIX</td><td>Fórmula Rayleigh-Pitot: exponentes γ/(γ+1)→γ/(γ−1) y 1/(γ+1)→1/(γ−1)</td></tr>
+    </tbody>
+  </table>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>Índice</h2>
+    <ol>
+      <li><a href="#s1">HTML 3D interactivo — Plotly.js (generate_3d_report.py)</a></li>
+      <li><a href="#s2">Sensibilidad de malla (main.py + generate_3d_report.py)</a></li>
+      <li><a href="#s3">Fuente tipográfica HTML</a></li>
+      <li><a href="#s4">Fix importación en generate_3d_report.py</a></li>
+      <li><a href="#s5">Fix load_sweep_csv (string→float crash)</a></li>
+      <li><a href="#s6">Fix STL_COARSE / STL_FINE en main.py</a></li>
+      <li><a href="#s7">Fix ruta stl_file en results.json</a></li>
+      <li><a href="#s8">Nuevo fichero run.py</a></li>
+      <li><a href="#s9">Limpieza de CSVs dispersos</a></li>
+      <li><a href="#s12">Fix fórmula Rayleigh-Pitot en MNM.py</a></li>
+    </ol>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s1">1 · HTML 3D interactivo — Plotly.js</h2>
+
+  <div class="change-card">
+    <span class="badge feat">FEAT</span>
+    <span class="file-tag">src/generate_3d_report.py</span>
+
+    <p style="margin-top:0.7rem;">
+      Se creó el fichero <code>generate_3d_report.py</code> (y la función
+      <code>generate_3d_html()</code>) para producir un reporte HTML completamente
+      autónomo con visualización 3D interactiva usando <strong>Plotly.js</strong>.
+      El fichero de salida es <code>results/report_3d.html</code>.
+    </p>
+
+    <h3>Características implementadas</h3>
+    <ul>
+      <li>Mapa de C<sub>p</sub> coloreado por cara (escala viridis) sobre la malla 3D rotable/zoomable.</li>
+      <li>Barra de selectores: <em>Malla</em>, <em>Método</em> (MN / MNM), <em>α</em>, <em>M∞</em>.</li>
+      <li>Pastillas de métricas dinámicas: CD, CL, CM, N-caras, S<sub>ref</sub>, L<sub>ref</sub>.</li>
+      <li>Pre-cómputo de toda la base de datos (mesh × model × α × M) en Python y serialización
+          como literal JS dentro del HTML — sin servidor, totalmente standalone.</li>
+      <li>Actualización eficiente con <code>Plotly.react()</code> en lugar de <code>newPlot()</code>.</li>
+      <li>Dropdown de M∞ deshabilitado cuando el método es MN (independiente de Mach).</li>
+    </ul>
+
+    <h3>Firma de la función</h3>
+    <div class="code-block">def generate_3d_html(
+    results_json:  Path | None = None,
+    cp_csv:        Path | None = None,
+    stl_capsule:   Path | None = None,
+    stl_sphere:    Path | None = None,
+    stl_coarse:    Path | None = None,   # ← nuevo
+    mesh_sens_csv: Path | None = None,   # ← nuevo
+    out_path:      Path | None = None,
+) -> Path:</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s2">2 · Sensibilidad de malla</h2>
+
+  <div class="change-card">
+    <span class="badge feat">FEAT</span>
+    <span class="file-tag">src/main.py</span>
+    <span class="file-tag">src/generate_3d_report.py</span>
+
+    <p style="margin-top:0.7rem;">
+      Adición de un <em>sweep</em> de sensibilidad de malla que compara cuatro
+      ficheros STL (PruebaARD / ARD3 / ARD4 / ARD2) con MN y MNM a α=10°, M=8.
+    </p>
+
+    <h3>Variables de configuración añadidas a main.py</h3>
+    <div class="code-block">RUN_MESH_SENSITIVITY  = True
+MESH_ALPHA = 10.0
+MESH_MACH  = 8.0
+MESH_STLS  = [
+    DATA_DIR / "Capsula" / "PruebaARD.stl",
+    DATA_DIR / "Capsula" / "PruebaARD3.stl",
+    DATA_DIR / "Capsula" / "PruebaARD4.stl",
+    DATA_DIR / "Capsula" / "PruebaARD2.stl",
+]</div>
+
+    <p>Salida: <code>results/results_mesh_sensitivity.csv</code></p>
+
+    <h3>Tab "Sensibilidad Malla" en el HTML 3D</h3>
+    <p>
+      Se añadió una pestaña con gráficas de convergencia (CD, CL, CM vs N-caras,
+      eje X logarítmico) y dos visores 3D lado a lado (malla gruesa vs media).
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s3">3 · Fuente tipográfica HTML</h2>
+
+  <div class="change-card">
+    <span class="badge fix">FIX</span>
+    <span class="file-tag">src/generate_3d_report.py</span>
+
+    <p style="margin-top:0.7rem;">
+      La fuente original <strong>Syne</strong> (pesada, muy condensada) fue reemplazada por
+      <strong>Outfit</strong> (proporcional, más legible) en todo el HTML generado.
+    </p>
+    <div class="code-block"><!-- Antes -->
+&lt;link href="…Syne:wght@400;600;800…"&gt;  font-family:'Syne'
+
+<!-- Después -->
+&lt;link href="…Outfit:wght@300;400;500;600;700…"&gt;  font-family:'Outfit'</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s4">4 · Fix importación en generate_3d_report.py</h2>
+
+  <div class="change-card">
+    <span class="badge fix">FIX</span>
+    <span class="file-tag">src/generate_3d_report.py</span>
+
+    <p style="margin-top:0.7rem;">
+      <code>stl_utils.py</code> importa <code>matplotlib</code> al nivel de módulo.
+      Al importarlo desde <code>generate_3d_report.py</code>, el proceso fallaba en entornos
+      sin display con <code>ModuleNotFoundError: No module named 'mpl_toolkits'</code>.
+    </p>
+    <p>
+      <strong>Solución:</strong> Se eliminó la dependencia de <code>stl_utils</code> e implementaron
+      funciones inline (<code>_stl_load()</code> y <code>_face_geom()</code>) usando sólo
+      <code>trimesh</code> y <code>numpy</code>.
+    </p>
+    <div class="code-block">def _stl_load(path):
+    import trimesh
+    return trimesh.load(str(path), force="mesh")
+
+def _face_geom(mesh):
+    verts = np.asarray(mesh.vertices, dtype=float)
+    faces = np.asarray(mesh.faces, dtype=int)
+    v0, v1, v2 = verts[faces[:,0]], verts[faces[:,1]], verts[faces[:,2]]
+    cross   = np.cross(v1-v0, v2-v0)
+    areas   = np.linalg.norm(cross, axis=1) / 2.0
+    normals = cross / (2.0*areas[:,None] + 1e-30)
+    centers = (v0+v1+v2) / 3.0
+    return {"centers": centers, "areas": areas, "normals": normals}</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s5">5 · Fix load_sweep_csv — crash string→float</h2>
+
+  <div class="change-card">
+    <span class="badge fix">FIX</span>
+    <span class="file-tag">src/generate_3d_report.py</span>
+
+    <p style="margin-top:0.7rem;">
+      La función <code>load_sweep_csv()</code> intentaba convertir todos los campos del CSV
+      a <code>float</code>, pero <code>results_mesh_sensitivity.csv</code> contiene columnas
+      de texto (<em>stl</em>, <em>model</em>), causando:
+    </p>
+    <div class="code-block">ValueError: could not convert string to float: 'PruebaARD.stl'</div>
+    <p><strong>Solución:</strong> Reemplazado por un helper <code>_cast()</code> que devuelve
+    el valor sin modificar si no es convertible a float.</p>
+    <div class="code-block">def _cast(v):
+    try:    return float(v)
+    except (ValueError, TypeError): return v
+
+return [{k: _cast(v) for k, v in r.items()} for r in rows]</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s6">6 · Fix STL_COARSE / STL_FINE en main.py</h2>
+
+  <div class="change-card">
+    <span class="badge fix">FIX</span>
+    <span class="file-tag">src/main.py</span>
+
+    <p style="margin-top:0.7rem;">
+      Las variables <code>STL_COARSE</code> y <code>STL_FINE</code> estaban asignadas
+      a <code>None</code>, impidiendo el cálculo de los casos
+      <em>capsule_MN_mesh_coarse_a10_M8</em> y <em>capsule_MN_mesh_fine_a10_M8</em>.
+    </p>
+    <div class="code-block"><!-- Antes -->
+STL_COARSE = None
+STL_FINE   = None
+
+<!-- Después -->
+STL_COARSE = DATA_DIR / "Capsula" / "PruebaARD.stl"   # 182 caras
+STL_FINE   = DATA_DIR / "Capsula" / "PruebaARD4.stl"  # 1510 caras</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s7">7 · Fix ruta stl_file en results.json</h2>
+
+  <div class="change-card">
+    <span class="badge fix">FIX</span>
+    <span class="file-tag">src/main.py</span>
+    <span class="file-tag">results/results.json</span>
+
+    <p style="margin-top:0.7rem;">
+      La línea que serializa la ruta del STL en el JSON usaba sólo el nombre del fichero,
+      perdiendo el subdirectorio <code>Capsula/</code>:
+    </p>
+    <div class="code-block"><!-- Antes — en main.py -->
+stl_file=f"data/{stl_path.name}",
+# producía: "data/PruebaARD3.stl"  ← incorrecto (fichero en data/Capsula/)
+
+<!-- Después -->
+stl_file=str(stl_path.relative_to(ROOT)).replace("\\", "/"),
+# produce:  "data/Capsula/PruebaARD3.stl"  ✓</div>
+
+    <p>
+      El fichero <code>results/results.json</code> fue actualizado manualmente para
+      reflejar las rutas correctas en los 5 casos de cápsula afectados:
+    </p>
+    <ul>
+      <li>capsule_MN_a0_M8 → <code>data/Capsula/PruebaARD3.stl</code></li>
+      <li>capsule_MNM_a0_M8 → <code>data/Capsula/PruebaARD3.stl</code></li>
+      <li>capsule_MNM_a10_M8 → <code>data/Capsula/PruebaARD3.stl</code></li>
+      <li>capsule_MNM_a20_M8 → <code>data/Capsula/PruebaARD3.stl</code></li>
+      <li>capsule_MN_mesh_coarse_a10_M8 → <code>data/Capsula/PruebaARD.stl</code></li>
+      <li>capsule_MN_mesh_fine_a10_M8 → <code>data/Capsula/PruebaARD4.stl</code></li>
+    </ul>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s8">8 · Nuevo fichero run.py</h2>
+
+  <div class="change-card">
+    <span class="badge new">NEW</span>
+    <span class="file-tag">run.py</span>
+
+    <p style="margin-top:0.7rem;">
+      Creado <code>run.py</code> en la raíz del proyecto como punto de entrada único,
+      tal como requiere el enunciado. Lanza <code>src/main.py</code> con el directorio
+      de trabajo correcto para que las rutas relativas se resuelvan bien.
+    </p>
+    <div class="code-block">python run.py</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s9">9 · Limpieza de CSVs dispersos</h2>
+
+  <div class="change-card">
+    <span class="badge clean">CLEAN</span>
+    <span class="file-tag">raíz del proyecto</span>
+    <span class="file-tag">src/</span>
+
+    <p style="margin-top:0.7rem;">
+      Ficheros CSV que se habían generado en directorios incorrectos (raíz y <code>src/</code>)
+      fueron movidos a <code>results/</code>:
+    </p>
+    <ul>
+      <li><code>cp_faces_alpha20.csv</code> → <code>results/</code></li>
+      <li><code>cp_faces_mnm_alpha20_M8.csv</code> → <code>results/</code></li>
+      <li><code>results_mnm_M8.csv</code> → <code>results/</code></li>
+      <li><code>results_mnm_mach_sweep.csv</code> → <code>results/</code></li>
+      <li><code>results_newton.csv</code> → <code>results/</code></li>
+      <li><code>src/cp_faces_mnm_alpha20_M8.csv</code> → <code>results/</code></li>
+      <li><code>src/results_mnm_M8.csv</code> → <code>results/</code></li>
+      <li><code>src/results_mnm_mach_sweep.csv</code> → <code>results/</code></li>
+    </ul>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2 id="s12">10 · Fix fórmula Rayleigh-Pitot en MNM.py</h2>
+
+  <div class="change-card fix">
+    <span class="badge fix">FIX</span>
+    <span class="file-tag">src/MNM.py</span>
+
+    <p style="margin-top:0.7rem;">
+      Los exponentes de la fórmula de Rayleigh-Pitot para C<sub>p,max</sub> eran
+      <strong>γ/(γ+1)</strong> y <strong>1/(γ+1)</strong>. Los correctos son
+      <strong>γ/(γ−1)</strong> y <strong>1/(γ−1)</strong>.
+      Con γ=1.4 esto supone un error de ~8.6% a M=8 y ~21% a M=2.
+    </p>
+    <div class="code-block"><!-- Antes -->
+term1 = ((g+1)/2 * M**2) ** (g/(g+1))           # exponente 0.583 ≠ 3.5
+term2 = ((1-g+2*g*M**2)/(g+1)) ** (1/(g+1))     # exponente 0.417 ≠ 2.5
+p02_over_pinf = term1 * term2
+
+<!-- Después: choque normal + isentrópica (Rayleigh-Pitot exacto) -->
+p2_over_p1    = (2*g*M**2 - (g-1)) / (g+1)
+M2_sq         = ((g-1)*M**2 + 2) / (2*g*M**2 - (g-1))
+p02_over_p2   = (1 + (g-1)/2 * M2_sq) ** (g/(g-1))
+p02_over_pinf = p2_over_p1 * p02_over_p2</div>
+    <p>
+      Cp,max corregido para M=8: <strong>1.827</strong> (antes 1.670) &nbsp;·&nbsp;
+      M=2: <strong>1.657</strong> (antes 1.312).
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2>Estructura final del proyecto</h2>
+  <div class="code-block">Aerodinamica/
+├── run.py                              ← NEW (C10)
+├── README.md
+├── Changes.html                        ← este fichero
+├── data/
+│   ├── esfera.stl
+│   └── Capsula/
+│       ├── PruebaARD.stl    (182 caras)
+│       ├── PruebaARD2.stl   (~400k caras)
+│       ├── PruebaARD3.stl   (1510 caras)
+│       └── PruebaARD4.stl   (1510 caras)
+├── results/
+│   ├── results.json                    ← 9 casos obligatorios ✓
+│   ├── report.html                     ← informe tabular
+│   ├── report_3d.html                  ← visor 3D interactivo
+│   ├── results_mn.csv
+│   ├── results_mnm_M8.csv
+│   ├── results_mnm_mach_sweep.csv
+│   ├── results_mesh_sensitivity.csv
+│   ├── cp_faces_mnm_a20_M8.csv
+│   └── (otros CSVs de salida)
+└── src/
+    ├── main.py
+    ├── MN.py
+    ├── MNM.py
+    ├── stl_utils.py
+    ├── export.py
+    └── generate_3d_report.py</div>
+
+  <div class="footer">
+    Registro de cambios · TP1 Aerodinámica · Grupo G5-ARD · 2026-03-17
+  </div>
+
+</div>
+</body>
+</html>

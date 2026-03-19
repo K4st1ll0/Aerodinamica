@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python src/generate_3d_report.py)"
+    ]
+  }
+}
