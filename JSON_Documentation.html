@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Schema Documentation — AAVFR TP1 results v1.1</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      background: #0f1117;
+      color: #d4d8e8;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 980px; margin: 0 auto; }
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: #60c8f0;
+      border-bottom: 2px solid #60c8f044;
+      padding-bottom: 0.6rem;
+      margin-bottom: 0.4rem;
+    }
+    .subtitle {
+      font-size: 0.93rem;
+      color: #8890aa;
+      margin-bottom: 2.5rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #80d8ff;
+      margin: 2.4rem 0 0.6rem;
+      border-bottom: 1px solid #1e2840;
+      padding-bottom: 0.3rem;
+    }
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #a0c8f0;
+      margin: 1.4rem 0 0.4rem;
+    }
+    p { margin-bottom: 0.8rem; color: #b8c0d8; }
+    ul { margin: 0.4rem 0 0.8rem 1.4rem; color: #b8c0d8; }
+    li { margin-bottom: 0.25rem; }
+
+    /* Cards */
+    .card {
+      background: #141720;
+      border: 1px solid #252a42;
+      border-left: 4px solid #3a80d0;
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1.2rem;
+    }
+    .card.warn  { border-left-color: #e07040; }
+    .card.ok    { border-left-color: #50c890; }
+    .card.info  { border-left-color: #a070d0; }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.15rem 0.55rem;
+      border-radius: 3px;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+    .badge.removed  { background: #3a1010; color: #f07070; }
+    .badge.required { background: #0e3020; color: #50c890; }
+    .badge.optional { background: #1a2a10; color: #90c860; }
+    .badge.string   { background: #1a2040; color: #80b8f0; }
+    .badge.number   { background: #2a1a40; color: #c090e0; }
+    .badge.array    { background: #1a3030; color: #60d8c0; }
+    .badge.object   { background: #2a2010; color: #d8a840; }
+    .badge.check    { background: #1a3020; color: #60e890; }
+    .badge.fail     { background: #3a1010; color: #f07070; }
+
+    /* Code */
+    code {
+      font-family: 'Courier New', monospace;
+      font-size: 0.83rem;
+      background: #0d1020;
+      color: #7ec8e3;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+    pre {
+      font-family: 'Courier New', monospace;
+      font-size: 0.83rem;
+      background: #0d1020;
+      color: #c8d8f0;
+      border: 1px solid #1e2840;
+      border-radius: 6px;
+      padding: 1.2rem 1.4rem;
+      overflow-x: auto;
+      margin: 0.8rem 0 1.2rem;
+      line-height: 1.6;
+    }
+    pre .key   { color: #7ec8e3; }
+    pre .str   { color: #90d870; }
+    pre .num   { color: #d8a840; }
+    pre .bool  { color: #f09050; }
+    pre .null  { color: #a06888; }
+    pre .cmt   { color: #5a6a8a; font-style: italic; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; margin: 0.6rem 0 1.4rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      background: #141a2a;
+      color: #80b8f0;
+      border-bottom: 2px solid #2a3a60;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td {
+      padding: 7px 12px;
+      border-bottom: 1px solid #1a2030;
+      vertical-align: top;
+    }
+    tr:hover td { background: #141a28; }
+    td code { font-size: 0.80rem; }
+    td.center { text-align: center; }
+
+    /* Check grid */
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 12px;
+      margin: 0.6rem 0 1.4rem;
+    }
+    .check-item {
+      background: #141720;
+      border: 1px solid #252a42;
+      border-radius: 8px;
+      padding: 12px 15px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .check-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      background: #1a3020;
+      border: 1px solid #50c890;
+      color: #50c890;
+      font-weight: 700;
+    }
+    .check-title { font-weight: 600; font-size: 0.9rem; color: #c0d8f0; margin-bottom: 3px; }
+    .check-desc  { font-size: 0.82rem; color: #8890aa; line-height: 1.5; }
+
+    /* Case list */
+    .case-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 10px;
+      margin: 0.6rem 0 1.4rem;
+    }
+    .case-item {
+      background: #141720;
+      border: 1px solid #252a42;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.80rem;
+    }
+    .case-id   { color: #7ec8e3; font-weight: 700; display: block; margin-bottom: 4px; }
+    .case-meta { color: #8890aa; font-size: 0.75rem; }
+    .tag-mn  { color: #4af0c4; background: #0a2a20; padding: 1px 6px; border-radius: 3px; }
+    .tag-mnm { color: #f06040; background: #2a1a10; padding: 1px 6px; border-radius: 3px; }
+
+    /* Values table */
+    .val-good { color: #50c890; }
+    .val-num  { color: #c090e0; font-family: 'Courier New', monospace; font-size: 0.82rem; }
+
+    /* What changed box */
+    .removed-box {
+      background: #1a0e0e;
+      border: 1px solid #502020;
+      border-left: 4px solid #e07040;
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1.2rem;
+    }
+    .removed-box h3 { color: #f09060; margin-top: 0; }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #1e2840;
+      font-size: 0.82rem;
+      color: #5a6280;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>JSON Schema Documentation</h1>
+  <p class="subtitle">AAVFR TP1 results · Schema v1.1 · Generated 2026-03-19</p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>1. Overview — Top-level Structure</h2>
+
+  <p>
+    The file <code>results.json</code> must conform to schema <strong>AAVFR_TP1_results v1.1</strong>.
+    It contains exactly four top-level keys:
+  </p>
+
+  <pre>
+{
+  <span class="key">"schema"</span>:    { <span class="key">"name"</span>: <span class="str">"AAVFR_TP1_results"</span>, <span class="key">"version"</span>: <span class="str">"1.1"</span> },
+  <span class="key">"team"</span>:      { <span class="cmt">/* group identification */</span> },
+  <span class="key">"reference"</span>: { <span class="cmt">/* aerodynamic conventions and reference quantities */</span> },
+  <span class="key">"cases"</span>:     [ <span class="cmt">/* array of exactly 9 case objects */</span> ]
+}</pre>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>2. Block Descriptions</h2>
+
+  <div class="card">
+    <h3><span class="badge object">object</span> schema</h3>
+    <p>Identifies the schema version used for autocorrection. Must be exactly
+    <code>{"name": "AAVFR_TP1_results", "version": "1.1"}</code>. Do not modify.</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="badge object">object</span> team</h3>
+    <p>Group identification. Contains <code>group_id</code> (string) and <code>members</code>
+    (array of strings with full names).</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="badge object">object</span> reference</h3>
+    <p>Defines the aerodynamic reference conventions: coordinate system description,
+    alpha definition, flow direction, reference area (<code>Sref_m2</code>),
+    reference length (<code>Lref_m</code>), moment reference point, and the unit
+    vectors for the CD, CL, and CM axes — all in body frame, SI units.</p>
+    <p>All vectors must be unit vectors (norm ≈ 1). No underscore-prefixed fields
+    are allowed in this block as of schema v1.1.</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="badge array">array</span> cases</h3>
+    <p>Array of exactly 9 case objects. Each case contains the aerodynamic coefficients
+    for one specific geometry / method / Mach / alpha combination.
+    The 9 required <code>case_id</code> values are fixed and must match exactly.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>3. Reference Block — Field Reference</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Units</th>
+          <th>Constraint</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>coordinate_system</code></td>
+          <td><span class="badge string">string</span></td>
+          <td>Human-readable description of the STL body frame axes and units</td>
+          <td>—</td>
+          <td>Informational</td>
+        </tr>
+        <tr>
+          <td><code>alpha_definition</code></td>
+          <td><span class="badge string">string</span></td>
+          <td>Convention for angle of attack: positive alpha tilts flow toward −z (nose up).
+              V∞ = [0, −cos(α), −sin(α)]</td>
+          <td>—</td>
+          <td>Informational</td>
+        </tr>
+        <tr>
+          <td><code>vinf_direction_body</code></td>
+          <td><span class="badge array">array[3]</span></td>
+          <td>Unit vector of the freestream velocity in body frame at α = 0</td>
+          <td>—</td>
+          <td>‖v‖ ≈ 1; evaluated at α = 0</td>
+        </tr>
+        <tr>
+          <td><code>Sref_m2</code></td>
+          <td><span class="badge number">float</span></td>
+          <td>Reference area for the capsule (frontal xz bounding box)</td>
+          <td>m²</td>
+          <td>&gt; 0</td>
+        </tr>
+        <tr>
+          <td><code>Lref_m</code></td>
+          <td><span class="badge number">float</span></td>
+          <td>Reference length for the capsule (y-axis extent of bounding box)</td>
+          <td>m</td>
+          <td>&gt; 0</td>
+        </tr>
+        <tr>
+          <td><code>moment_reference_point_m</code></td>
+          <td><span class="badge array">array[3]</span></td>
+          <td>Moment reference point (area-weighted centroid of capsule faces)</td>
+          <td>m</td>
+          <td>In body frame</td>
+        </tr>
+        <tr>
+          <td><code>CD_axis_body</code></td>
+          <td><span class="badge array">array[3]</span></td>
+          <td>Unit vector defining the drag direction in body frame</td>
+          <td>—</td>
+          <td>‖v‖ ≈ 1</td>
+        </tr>
+        <tr>
+          <td><code>CL_axis_body</code></td>
+          <td><span class="badge array">array[3]</span></td>
+          <td>Unit vector defining the lift direction in body frame</td>
+          <td>—</td>
+          <td>‖v‖ ≈ 1</td>
+        </tr>
+        <tr>
+          <td><code>CM_axis_body</code></td>
+          <td><span class="badge array">array[3]</span></td>
+          <td>Unit vector defining the pitching moment axis in body frame (+x)</td>
+          <td>—</td>
+          <td>‖v‖ ≈ 1</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>4. Case Object — Field Reference</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Constraint</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>case_id</code></td>
+          <td><span class="badge string">string</span></td>
+          <td>Unique identifier. Must be one of the 9 required values (see Section 5)</td>
+          <td>Exact match required</td>
+        </tr>
+        <tr>
+          <td><code>geometry_name</code></td>
+          <td><span class="badge string">string</span></td>
+          <td>Geometry label: <code>"sphere"</code> or <code>"capsule"</code></td>
+          <td>One of the two values</td>
+        </tr>
+        <tr>
+          <td><code>stl_file</code></td>
+          <td><span class="badge string">string</span></td>
+          <td>Relative path to the STL file (from project root, forward slashes)</td>
+          <td>Relative path, no backslashes</td>
+        </tr>
+        <tr>
+          <td><code>triangles</code></td>
+          <td><span class="badge number">int</span></td>
+          <td>Number of triangular faces in the mesh</td>
+          <td>&gt; 0</td>
+        </tr>
+        <tr>
+          <td><code>model</code></td>
+          <td><span class="badge string">string</span></td>
+          <td>Aerodynamic method: <code>"MN"</code> (Newton) or <code>"MNM"</code> (Modified Newton)</td>
+          <td>Exactly <code>"MN"</code> or <code>"MNM"</code></td>
+        </tr>
+        <tr>
+          <td><code>Mach</code></td>
+          <td><span class="badge number">float</span></td>
+          <td>Freestream Mach number</td>
+          <td>&gt; 0</td>
+        </tr>
+        <tr>
+          <td><code>alpha_deg</code></td>
+          <td><span class="badge number">float</span></td>
+          <td>Angle of attack in degrees</td>
+          <td>Any real number</td>
+        </tr>
+        <tr>
+          <td><code>CD</code></td>
+          <td><span class="badge number">float</span></td>
+          <td>Drag coefficient projected onto wind-axis drag direction (dot product of CF_body with eD)</td>
+          <td>CD ≥ 0; rounded to 8 decimals</td>
+        </tr>
+        <tr>
+          <td><code>CL</code></td>
+          <td><span class="badge number">float</span></td>
+          <td>Lift coefficient projected onto wind-axis lift direction</td>
+          <td>Rounded to 8 decimals</td>
+        </tr>
+        <tr>
+          <td><code>CM</code></td>
+          <td><span class="badge number">float</span></td>
+          <td>Pitching moment coefficient around +x axis</td>
+          <td>Rounded to 8 decimals</td>
+        </tr>
+        <tr>
+          <td><code>force_coeff_body</code></td>
+          <td><span class="badge array">array[3]</span></td>
+          <td>Total aerodynamic force coefficient vector in body frame [CFx, CFy, CFz]</td>
+          <td>Each component rounded to 8 decimals</td>
+        </tr>
+        <tr>
+          <td><code>moment_coeff_body</code></td>
+          <td><span class="badge array">array[3]</span></td>
+          <td>Total aerodynamic moment coefficient vector in body frame [CMx, CMy, CMz]</td>
+          <td>Each component rounded to 8 decimals</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>5. Required Cases (9 total)</h2>
+
+  <p>The <code>cases</code> array must contain exactly these 9 entries, in any order,
+  with the exact <code>case_id</code> strings shown below:</p>
+
+  <div class="case-list">
+    <div class="case-item">
+      <span class="case-id">sphere_MN_a0_M8</span>
+      <span class="case-meta"><span class="tag-mn">MN</span> &nbsp; sphere &nbsp; α=0° &nbsp; M=8</span>
+    </div>
+    <div class="case-item">
+      <span class="case-id">sphere_MNM_a0_M2</span>
+      <span class="case-meta"><span class="tag-mnm">MNM</span> &nbsp; sphere &nbsp; α=0° &nbsp; M=2</span>
+    </div>
+    <div class="case-item">
+      <span class="case-id">sphere_MNM_a0_M8</span>
+      <span class="case-meta"><span class="tag-mnm">MNM</span> &nbsp; sphere &nbsp; α=0° &nbsp; M=8</span>
+    </div>
+    <div class="case-item">
+      <span class="case-id">capsule_MN_a0_M8</span>
+      <span class="case-meta"><span class="tag-mn">MN</span> &nbsp; capsule &nbsp; α=0° &nbsp; M=8</span>
+    </div>
+    <div class="case-item">
+      <span class="case-id">capsule_MNM_a0_M8</span>
+      <span class="case-meta"><span class="tag-mnm">MNM</span> &nbsp; capsule &nbsp; α=0° &nbsp; M=8</span>
+    </div>
+    <div class="case-item">
+      <span class="case-id">capsule_MNM_a10_M8</span>
+      <span class="case-meta"><span class="tag-mnm">MNM</span> &nbsp; capsule &nbsp; α=10° &nbsp; M=8</span>
+    </div>
+    <div class="case-item">
+      <span class="case-id">capsule_MNM_a20_M8</span>
+      <span class="case-meta"><span class="tag-mnm">MNM</span> &nbsp; capsule &nbsp; α=20° &nbsp; M=8</span>
+    </div>
+    <div class="case-item">
+      <span class="case-id">capsule_MN_mesh_coarse_a10_M8</span>
+      <span class="case-meta"><span class="tag-mn">MN</span> &nbsp; capsule (coarse mesh) &nbsp; α=10° &nbsp; M=8</span>
+    </div>
+    <div class="case-item">
+      <span class="case-id">capsule_MN_mesh_fine_a10_M8</span>
+      <span class="case-meta"><span class="tag-mn">MN</span> &nbsp; capsule (fine mesh) &nbsp; α=10° &nbsp; M=8</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>6. Coherence Checks C1–C6</h2>
+
+  <p>The autocorrector verifies 6 rules. All must pass for full credit:</p>
+
+  <div class="check-grid">
+    <div class="check-item">
+      <div class="check-icon">C1</div>
+      <div>
+        <div class="check-title">Internal consistency</div>
+        <div class="check-desc">For every case: CD ≥ 0, all components of
+        <code>force_coeff_body</code> have absolute value &lt; 50, and same for
+        <code>moment_coeff_body</code>.</div>
+      </div>
+    </div>
+    <div class="check-item">
+      <div class="check-icon">C2</div>
+      <div>
+        <div class="check-title">Sphere symmetry at α = 0</div>
+        <div class="check-desc">For the three sphere cases at α = 0:
+        |CL| &lt; 1×10⁻³ and |CM| &lt; 1×10⁻³. Expected error is at machine
+        precision (~10⁻¹⁷).</div>
+      </div>
+    </div>
+    <div class="check-item">
+      <div class="check-icon">C3</div>
+      <div>
+        <div class="check-title">Mach sensitivity — sphere MNM</div>
+        <div class="check-desc">CD at M=8 must exceed CD at M=2 by more than
+        1×10⁻³: <code>CD_M8 &gt; CD_M2 + 0.001</code></div>
+      </div>
+    </div>
+    <div class="check-item">
+      <div class="check-icon">C4</div>
+      <div>
+        <div class="check-title">Capsule symmetry at α = 0</div>
+        <div class="check-desc">For capsule cases at α = 0 (MN and MNM):
+        |CL| &lt; 5×10⁻³ and |CM| &lt; 5×10⁻³.</div>
+      </div>
+    </div>
+    <div class="check-item">
+      <div class="check-icon">C5</div>
+      <div>
+        <div class="check-title">CL grows monotonically with α — capsule MNM</div>
+        <div class="check-desc">|CL(α=10°)| &gt; |CL(α=0°)| + 1×10⁻³ and
+        |CL(α=20°)| &gt; |CL(α=10°)| + 1×10⁻³</div>
+      </div>
+    </div>
+    <div class="check-item">
+      <div class="check-icon">C6</div>
+      <div>
+        <div class="check-title">Mesh sensitivity</div>
+        <div class="check-desc">The relative difference in CD between the coarse
+        and fine capsule meshes at α=10° must be less than 5%:
+        |CD_fine − CD_coarse| / max(|CD_fine|, 1×10⁻⁶) &lt; 0.05</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>7. What Changed — Schema v1.1 Cleanup</h2>
+
+  <div class="removed-box">
+    <h3>Underscore-prefixed fields removed</h3>
+    <p>The following fields were present in previous outputs but are <strong>not part of
+    schema v1.1</strong>. They have been removed to avoid autocorrection failures caused
+    by unexpected keys:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Was in</th><th>Reason removed</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>_n_windward</code></td>
+            <td>Each case object</td>
+            <td>Internal diagnostic counter. Not in schema v1.1. Removed from <code>build_case_dict</code>.</td>
+          </tr>
+          <tr>
+            <td><code>_n_leeward</code></td>
+            <td>Each case object</td>
+            <td>Internal diagnostic counter. Not in schema v1.1. Removed from <code>build_case_dict</code>.</td>
+          </tr>
+          <tr>
+            <td><code>_cp_max_mnm</code></td>
+            <td>Each case object</td>
+            <td>MNM stagnation Cp. Useful for analysis but not required. Removed from <code>build_case_dict</code>.</td>
+          </tr>
+          <tr>
+            <td><code>_sphere_Sref_m2</code></td>
+            <td>reference block</td>
+            <td>Sphere reference area. Now passed as a parameter to <code>generate_html()</code> instead of stored in JSON.</td>
+          </tr>
+          <tr>
+            <td><code>_sphere_Lref_m</code></td>
+            <td>reference block</td>
+            <td>Sphere reference length (2R). Same — passed to HTML generator directly.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The <code>build_reference_block()</code> function now silently filters out any
+    <code>**kwargs</code> whose key starts with an underscore, so legacy callers that
+    pass <code>_sphere_Sref_m2=...</code> will not pollute the JSON output.</p>
+    <p>The <code>generate_html()</code> function now accepts explicit parameters
+    <code>sphere_sref</code> and <code>sphere_lref</code> for the report display.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>8. Current Values from results.json</h2>
+
+  <p>These are the actual computed values in the current <code>results/results.json</code>:</p>
+
+  <h3>Reference block</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Sref_m2</code> (capsule)</td><td class="val-num">7.74406313 m²</td></tr>
+        <tr><td><code>Lref_m</code> (capsule)</td><td class="val-num">2.040038 m</td></tr>
+        <tr><td><code>moment_reference_point_m</code></td><td class="val-num">[−0.0, −1.846204, 0.0] m</td></tr>
+        <tr><td><code>vinf_direction_body</code> at α=0</td><td class="val-num">[0.0, −1.0, −0.0]</td></tr>
+        <tr><td><code>CD_axis_body</code></td><td class="val-num">[0.0, −1.0, −0.0]</td></tr>
+        <tr><td><code>CL_axis_body</code></td><td class="val-num">[0.0, 0.0, −1.0]</td></tr>
+        <tr><td><code>CM_axis_body</code></td><td class="val-num">[1.0, 0.0, 0.0]</td></tr>
+        <tr><td>Sphere S_ref (HTML only, not in JSON)</td><td class="val-num">0.00774234 m²</td></tr>
+        <tr><td>Sphere L_ref / 2R (HTML only, not in JSON)</td><td class="val-num">0.099287 m</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Cases summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>case_id</th>
+          <th>model</th>
+          <th>geo</th>
+          <th>M</th>
+          <th>α°</th>
+          <th>triangles</th>
+          <th>CD</th>
+          <th>CL</th>
+          <th>CM</th>
+          <th>C1–C6</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>sphere_MN_a0_M8</code></td>
+          <td><span class="tag-mn">MN</span></td>
+          <td>sphere</td>
+          <td class="val-num">8</td>
+          <td class="val-num">0</td>
+          <td class="val-num">528</td>
+          <td class="val-num">1.00281549</td>
+          <td class="val-num">0.0</td>
+          <td class="val-num">−0.0</td>
+          <td><span class="badge check">C1 C2</span></td>
+        </tr>
+        <tr>
+          <td><code>sphere_MNM_a0_M2</code></td>
+          <td><span class="tag-mnm">MNM</span></td>
+          <td>sphere</td>
+          <td class="val-num">2</td>
+          <td class="val-num">0</td>
+          <td class="val-num">528</td>
+          <td class="val-num">0.83098320</td>
+          <td class="val-num">−0.0</td>
+          <td class="val-num">0.0</td>
+          <td><span class="badge check">C1 C2 C3</span></td>
+        </tr>
+        <tr>
+          <td><code>sphere_MNM_a0_M8</code></td>
+          <td><span class="tag-mnm">MNM</span></td>
+          <td>sphere</td>
+          <td class="val-num">8</td>
+          <td class="val-num">0</td>
+          <td class="val-num">528</td>
+          <td class="val-num">0.91624955</td>
+          <td class="val-num">−0.0</td>
+          <td class="val-num">0.0</td>
+          <td><span class="badge check">C1 C2 C3</span></td>
+        </tr>
+        <tr>
+          <td><code>capsule_MN_a0_M8</code></td>
+          <td><span class="tag-mn">MN</span></td>
+          <td>capsule</td>
+          <td class="val-num">8</td>
+          <td class="val-num">0</td>
+          <td class="val-num">1510</td>
+          <td class="val-num">0.60943387</td>
+          <td class="val-num">−0.0</td>
+          <td class="val-num">−0.0</td>
+          <td><span class="badge check">C1 C4</span></td>
+        </tr>
+        <tr>
+          <td><code>capsule_MNM_a0_M8</code></td>
+          <td><span class="tag-mnm">MNM</span></td>
+          <td>capsule</td>
+          <td class="val-num">8</td>
+          <td class="val-num">0</td>
+          <td class="val-num">1510</td>
+          <td class="val-num">0.55682577</td>
+          <td class="val-num">−0.0</td>
+          <td class="val-num">−0.0</td>
+          <td><span class="badge check">C1 C4 C5</span></td>
+        </tr>
+        <tr>
+          <td><code>capsule_MNM_a10_M8</code></td>
+          <td><span class="tag-mnm">MNM</span></td>
+          <td>capsule</td>
+          <td class="val-num">8</td>
+          <td class="val-num">10</td>
+          <td class="val-num">1510</td>
+          <td class="val-num">0.57077996</td>
+          <td class="val-num">0.05122157</td>
+          <td class="val-num">0.02517819</td>
+          <td><span class="badge check">C1 C5</span></td>
+        </tr>
+        <tr>
+          <td><code>capsule_MNM_a20_M8</code></td>
+          <td><span class="tag-mnm">MNM</span></td>
+          <td>capsule</td>
+          <td class="val-num">8</td>
+          <td class="val-num">20</td>
+          <td class="val-num">1510</td>
+          <td class="val-num">0.60663181</td>
+          <td class="val-num">0.08076259</td>
+          <td class="val-num">0.04741055</td>
+          <td><span class="badge check">C1 C5</span></td>
+        </tr>
+        <tr>
+          <td><code>capsule_MN_mesh_coarse_a10_M8</code></td>
+          <td><span class="tag-mn">MN</span></td>
+          <td>capsule</td>
+          <td class="val-num">8</td>
+          <td class="val-num">10</td>
+          <td class="val-num">182</td>
+          <td class="val-num">0.59194408</td>
+          <td class="val-num">0.05758294</td>
+          <td class="val-num">0.02489304</td>
+          <td><span class="badge check">C1 C6</span></td>
+        </tr>
+        <tr>
+          <td><code>capsule_MN_mesh_fine_a10_M8</code></td>
+          <td><span class="tag-mn">MN</span></td>
+          <td>capsule</td>
+          <td class="val-num">8</td>
+          <td class="val-num">10</td>
+          <td class="val-num">1510</td>
+          <td class="val-num">0.56627367</td>
+          <td class="val-num">0.06439854</td>
+          <td class="val-num">0.02452084</td>
+          <td><span class="badge check">C1 C6</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card ok">
+    <h3>Check C3 — Sphere Mach sensitivity</h3>
+    <p>CD(M=8) = 0.91624955 &gt; CD(M=2) = 0.83098320 + 0.001 = 0.83198320 &nbsp; <strong class="val-good">PASS</strong></p>
+  </div>
+
+  <div class="card ok">
+    <h3>Check C5 — Capsule CL monotone growth</h3>
+    <p>|CL(α=0°)| = 0.0 &nbsp;→&nbsp; |CL(α=10°)| = 0.05122157 &nbsp;→&nbsp; |CL(α=20°)| = 0.08076259 &nbsp; <strong class="val-good">PASS (monotone)</strong></p>
+  </div>
+
+  <div class="card ok">
+    <h3>Check C6 — Mesh sensitivity</h3>
+    <p>ΔCD = |0.56627367 − 0.59194408| = 0.02567 &nbsp;|&nbsp; relative = 4.5% &lt; 5% &nbsp; <strong class="val-good">PASS</strong></p>
+  </div>
+
+  <footer>
+    <span>AAVFR · Máster Sistemas Espaciales · UPM · IDR</span>
+    <span>Schema AAVFR_TP1_results v1.1 · Generated 2026-03-19</span>
+  </footer>
+
+</div>
+</body>
+</html>

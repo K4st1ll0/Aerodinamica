@@ -40,9 +40,6 @@ def build_case_dict(
     CD:            float,
     CL:            float,
     CM:            float,
-    n_windward:    int = 0,
-    n_leeward:     int = 0,
-    cp_max_mnm:    float | None = None,
 ) -> dict:
     """
     Empaqueta el resultado de un caso en el formato del esquema v1.1.
@@ -64,10 +61,6 @@ def build_case_dict(
         "CM":                round(float(CM), 8),
         "force_coeff_body":  [round(float(x), 8) for x in CF_total],
         "moment_coeff_body": [round(float(x), 8) for x in CM_total],
-        # campos extra útiles para el informe (no requeridos por el esquema)
-        "_n_windward":  int(n_windward),
-        "_n_leeward":   int(n_leeward),
-        "_cp_max_mnm":  round(float(cp_max_mnm), 8) if cp_max_mnm is not None else None,
     }
 
 
@@ -124,7 +117,7 @@ def build_reference_block(
         "CL_axis_body":               [round(x, 6) for x in CL_axis_body],
         "CM_axis_body":               [round(x, 6) for x in CM_axis_body],
     }
-    ref.update(extra)
+    ref.update({k: v for k, v in extra.items() if not k.startswith("_")})
     return ref
 
 
@@ -214,7 +207,7 @@ def _check(results: dict) -> bool:
 # HTML report
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_html(results: dict, out_path: str | Path = "results/report.html") -> None:
+def generate_html(results: dict, out_path: str | Path = "results/report.html", sphere_sref: float = 0.0, sphere_lref: float = 0.0) -> None:
     """
     Genera un informe HTML standalone a partir del dict de results.json.
     Los datos se embeben directamente en el JS — no requiere servidor.
@@ -231,8 +224,8 @@ def generate_html(results: dict, out_path: str | Path = "results/report.html") -
     sref_val    = ref.get("Sref_m2", 0)
     lref_val    = ref.get("Lref_m", 0)
     rref_val    = ref.get("moment_reference_point_m", [0, 0, 0])
-    sp_sref     = ref.get("_sphere_Sref_m2", 0)
-    sp_lref     = ref.get("_sphere_Lref_m", 0)
+    sp_sref     = sphere_sref
+    sp_lref     = sphere_lref
 
     def _cp_max(M, g=1.4):
         t1 = ((g+1)/2*M**2)**(g/(g+1))
@@ -247,7 +240,7 @@ def generate_html(results: dict, out_path: str | Path = "results/report.html") -
         f'  {{ id:"{c["case_id"]}", geo:"{c["geometry_name"]}", '
         f'model:"{c["model"]}", M:{c["Mach"]}, a:{c["alpha_deg"]}, '
         f'CD:{c["CD"]}, CL:{c["CL"]}, CM:{c["CM"]}, '
-        f'nw:{c.get("_n_windward", 0)} }}'
+        f'nw:0 }}'
         for c in cases
     ) + "\n]"
 
