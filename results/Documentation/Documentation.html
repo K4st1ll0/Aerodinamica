@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AAVFR TP1 — Documentación Técnica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+:root {
+  --bg:#07090f; --bg2:#0f1220; --bg3:#161b2c; --border:#1e2540;
+  --accent:#3de8b0; --accent2:#e85040; --accent3:#7060e8; --accent4:#e8a030;
+  --text:#ccd6f6; --muted:#4a5580;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:'Outfit',sans-serif; font-weight:400;
+  min-height:100vh; overflow-x:hidden; line-height:1.7;
+}
+body::after {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),
+    linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:50px 50px; opacity:.18;
+}
+.wrap { position:relative; z-index:1; max-width:980px; margin:0 auto; padding:0 28px 100px; }
+
+/* Nav */
+nav {
+  position:sticky; top:0; z-index:100;
+  background:rgba(7,9,15,.94); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:0; padding:0 28px; height:52px;
+}
+.nav-brand {
+  font-family:'Space Mono',monospace; font-size:11px; font-weight:700;
+  color:var(--accent); letter-spacing:.1em; padding-right:24px;
+  border-right:1px solid var(--border); white-space:nowrap;
+}
+.nav-links { display:flex; overflow-x:auto; scrollbar-width:none; gap:0; }
+.nav-links::-webkit-scrollbar { display:none; }
+.nav-link {
+  background:none; border:none; color:var(--muted);
+  font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.06em;
+  padding:0 16px; height:52px; cursor:pointer; white-space:nowrap;
+  border-bottom:2px solid transparent; transition:color .2s,border-color .2s;
+  text-decoration:none; display:flex; align-items:center;
+}
+.nav-link:hover { color:var(--text); }
+
+/* Header */
+header { padding:60px 0 44px; border-bottom:1px solid var(--border); margin-bottom:52px; }
+.hbadge {
+  display:inline-block; background:var(--accent); color:var(--bg);
+  font-family:'Space Mono',monospace; font-size:9.5px; font-weight:700;
+  letter-spacing:.12em; padding:4px 10px; border-radius:3px; margin-bottom:18px;
+}
+h1 { font-size:clamp(2rem,4vw,3.2rem); font-weight:700; line-height:1.1; letter-spacing:-.02em; }
+h1 em { color:var(--accent); font-style:normal; }
+.subtitle {
+  margin-top:12px; font-family:'Space Mono',monospace; font-size:10px;
+  color:var(--muted); letter-spacing:.06em;
+}
+
+/* Sections */
+.section { margin-bottom:64px; }
+.shead { display:flex; align-items:center; gap:14px; margin-bottom:28px; margin-top:56px; }
+.snum {
+  font-family:'Space Mono',monospace; font-size:10px; color:var(--accent);
+  border:1px solid var(--accent); padding:3px 8px; border-radius:2px; letter-spacing:.1em;
+  flex-shrink:0;
+}
+.shead h2 { font-size:1.35rem; font-weight:700; }
+.sline { flex:1; height:1px; background:linear-gradient(90deg,var(--border),transparent); }
+
+h3 { font-size:1.05rem; font-weight:600; color:var(--text); margin:28px 0 10px; }
+h4 { font-size:.92rem; font-weight:600; color:var(--accent4); margin:20px 0 8px; }
+
+p { margin-bottom:14px; color:var(--text); font-size:.95rem; }
+p strong { color:var(--accent); }
+p em { color:var(--accent4); font-style:normal; font-weight:500; }
+
+/* Equation boxes */
+.eq-box {
+  background:var(--bg2); border:1px solid var(--border);
+  border-left:3px solid var(--accent3); border-radius:8px;
+  padding:18px 22px; margin:18px 0; overflow-x:auto;
+}
+.eq-label {
+  font-family:'Space Mono',monospace; font-size:8.5px;
+  color:var(--accent3); letter-spacing:.1em; margin-bottom:8px;
+}
+
+/* Info boxes */
+.info-box {
+  background:var(--bg2); border:1px solid var(--border);
+  border-left:3px solid var(--accent); border-radius:8px;
+  padding:16px 20px; margin:18px 0;
+}
+.warn-box {
+  background:var(--bg2); border:1px solid var(--border);
+  border-left:3px solid var(--accent2); border-radius:8px;
+  padding:16px 20px; margin:18px 0;
+}
+.note-box {
+  background:var(--bg2); border:1px solid var(--border);
+  border-left:3px solid var(--accent4); border-radius:8px;
+  padding:16px 20px; margin:18px 0;
+}
+
+/* Tables */
+.tw { overflow-x:auto; border:1px solid var(--border); border-radius:10px; margin:20px 0; }
+table { width:100%; border-collapse:collapse; font-family:'Space Mono',monospace; font-size:10.5px; }
+th {
+  text-align:left; padding:10px 14px; border-bottom:1px solid var(--accent);
+  color:var(--accent); font-size:9px; letter-spacing:.1em; white-space:nowrap;
+  background:var(--bg2);
+}
+td { padding:9px 14px; border-bottom:1px solid var(--border); white-space:nowrap; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--bg3); }
+.tpass { color:var(--accent); font-weight:700; }
+.tfail { color:var(--accent2); font-weight:700; }
+
+/* Code */
+code {
+  background:var(--bg3); border:1px solid var(--border); border-radius:4px;
+  padding:2px 6px; font-family:'Space Mono',monospace; font-size:.82em;
+  color:var(--accent4);
+}
+pre {
+  background:var(--bg2); border:1px solid var(--border); border-radius:8px;
+  padding:16px 20px; overflow-x:auto; margin:16px 0;
+}
+pre code { background:none; border:none; padding:0; font-size:.88em; color:var(--accent); }
+
+/* Lists */
+ul, ol { padding-left:22px; margin-bottom:14px; }
+li { margin-bottom:6px; font-size:.95rem; }
+li strong { color:var(--accent); }
+
+/* Footer */
+footer {
+  margin-top:80px; padding-top:20px; border-top:1px solid var(--border);
+  font-family:'Space Mono',monospace; font-size:9.5px; color:var(--muted);
+  display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+}
+
+/* Cases table JS-loaded */
+#cases-tbody td.cd { color:var(--accent2); font-weight:700; }
+#cases-tbody td.cl { color:var(--accent); }
+#cases-tbody td.cm { color:var(--accent3); }
+.tag {
+  display:inline-block; font-family:'Space Mono',monospace; font-size:8.5px;
+  padding:2px 7px; border-radius:2px; font-weight:700;
+}
+.tag.MN  { background:#3de8b018; color:var(--accent);  border:1px solid var(--accent); }
+.tag.MNM { background:#e8504018; color:var(--accent2); border:1px solid var(--accent2); }
+
+/* Check card */
+.ck-card {
+  background:var(--bg2); border:1px solid var(--border); border-radius:10px;
+  padding:16px; margin-bottom:12px; display:flex; gap:14px; align-items:flex-start;
+}
+.ck-num {
+  font-family:'Space Mono',monospace; font-size:11px; font-weight:700;
+  color:var(--accent3); border:1px solid var(--accent3);
+  width:36px; height:36px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.ck-title { font-weight:700; font-size:.9rem; margin-bottom:4px; }
+.ck-desc { font-size:.85rem; color:var(--muted); line-height:1.6; }
+
+/* TOC */
+.toc {
+  background:var(--bg2); border:1px solid var(--border); border-radius:10px;
+  padding:20px 24px; margin-bottom:40px;
+}
+.toc-title {
+  font-family:'Space Mono',monospace; font-size:10px;
+  color:var(--accent); letter-spacing:.1em; margin-bottom:14px;
+}
+.toc ol { counter-reset:toc; padding-left:0; list-style:none; }
+.toc ol li {
+  counter-increment:toc; padding:4px 0;
+  border-bottom:1px solid var(--border); margin:0;
+}
+.toc ol li:last-child { border-bottom:none; }
+.toc a {
+  color:var(--muted); text-decoration:none; font-size:.88rem;
+  transition:color .2s;
+}
+.toc a:hover { color:var(--accent); }
+.toc a::before {
+  content:counter(toc, decimal-leading-zero) ". ";
+  font-family:'Space Mono',monospace; font-size:10px;
+  color:var(--border); margin-right:8px;
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">AAVFR · TP1</div>
+  <div class="nav-links">
+    <a class="nav-link" href="#intro">Introducción</a>
+    <a class="nav-link" href="#mn">Método MN</a>
+    <a class="nav-link" href="#mnm">Método MNM</a>
+    <a class="nav-link" href="#ejes">Ejes y Referencia</a>
+    <a class="nav-link" href="#refs-aero">Referencias Aero.</a>
+    <a class="nav-link" href="#mallas">Mallas STL</a>
+    <a class="nav-link" href="#sensibilidad">Sensibilidad Malla</a>
+    <a class="nav-link" href="#resultados">Resultados</a>
+    <a class="nav-link" href="#checks">Checks C1–C6</a>
+    <a class="nav-link" href="#biblio">Bibliografía</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<header>
+  <div class="hbadge">DOCUMENTACIÓN TÉCNICA · TP1</div>
+  <h1>Métodos de <em>Inclinación Local</em><br>en Aerodinámica Hipersónica</h1>
+  <p class="subtitle">
+    AAVFR · Máster en Sistemas Espaciales · UPM · IDR/UPM &nbsp;·&nbsp;
+    Newton (MN) y Newton Modificado (MNM) &nbsp;·&nbsp;
+    Cápsula ARD · Esfera
+  </p>
+</header>
+
+<!-- TOC -->
+<div class="toc">
+  <div class="toc-title">ÍNDICE DE CONTENIDOS</div>
+  <ol>
+    <li><a href="#intro">Introducción y contexto del TP1</a></li>
+    <li><a href="#mn">Método de Newton (MN) — Fórmulas completas</a></li>
+    <li><a href="#mnm">Método de Newton Modificado (MNM) — Fórmulas completas</a></li>
+    <li><a href="#ejes">Convenciones de ejes y definición de α</a></li>
+    <li><a href="#refs-aero">Referencias aerodinámicas: S_ref, L_ref, r_ref</a></li>
+    <li><a href="#mallas">Mallas STL utilizadas</a></li>
+    <li><a href="#sensibilidad">Análisis de sensibilidad de malla</a></li>
+    <li><a href="#resultados">Resultados de los 9 casos obligatorios</a></li>
+    <li><a href="#checks">Checks de coherencia C1–C6</a></li>
+    <li><a href="#biblio">Bibliografía y referencias</a></li>
+  </ol>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 1. INTRODUCCIÓN -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="intro">
+  <div class="shead"><span class="snum">01</span><h2>Introducción y contexto del TP1</h2><div class="sline"></div></div>
+
+  <p>
+    El <strong>Trabajo Práctico 1 (TP1)</strong> de la asignatura <em>Aerodinámica Avanzada de Vehículos de Reentrada (AAVFR)</em>
+    tiene por objetivo el cálculo de coeficientes aerodinámicos de cuerpos romos típicos de reentrada
+    (cápsula tipo ARD y esfera) mediante <strong>métodos de inclinación local</strong> (Local Surface
+    Inclination Methods, LSIM), que constituyen la aproximación de primer orden más utilizada en la fase
+    de diseño conceptual de vehículos hipersónicos.
+  </p>
+  <p>
+    Los métodos de inclinación local se basan en que, a número de Mach suficientemente alto
+    (M∞ ≫ 1), la presión sobre cada panel superficial puede calcularse únicamente a partir del ángulo
+    local de inclinación de la superficie respecto al flujo incidente, sin necesidad de resolver las
+    ecuaciones de Euler o Navier-Stokes en todo el dominio. Esto los hace extremadamente eficientes
+    computacionalmente, apropiados para barridos paramétricos de α y M∞.
+  </p>
+
+  <h3>Métodos implementados</h3>
+  <ul>
+    <li>
+      <strong>MN — Método de Newton:</strong> Solución límite para M∞ → ∞. El coeficiente de presión
+      depende únicamente del cuadrado del seno del ángulo de inclinación local θ. Es independiente
+      del número de Mach.
+    </li>
+    <li>
+      <strong>MNM — Método de Newton Modificado:</strong> Extiende MN multiplicando el término
+      sin²θ por el coeficiente de presión máximo de punto de remanso cp,max(M∞, γ), que sí depende
+      del número de Mach. Mejora la predicción a Mach finitos (M ≳ 2).
+    </li>
+  </ul>
+
+  <h3>Geometrías analizadas</h3>
+  <ul>
+    <li>
+      <strong>Cápsula ARD (Atmospheric Reentry Demonstrator):</strong> Cuerpo de reentrada esférico-cónico
+      con escudo térmico frontal. Geometría discretizada mediante mallas triangulares STL de distinta
+      resolución.
+    </li>
+    <li>
+      <strong>Esfera:</strong> Geometría de referencia para validación, ya que su CD teórico
+      en la teoría de Newton pura es 1.0 (independiente de α para geometría perfectamente
+      simétrica).
+    </li>
+  </ul>
+
+  <div class="info-box">
+    <strong>Nota sobre validez del método:</strong> Los LSIM son válidos exclusivamente en el
+    régimen hipersónico (M∞ ≥ 3–5 aproximadamente) y para paneles que "miran" al flujo
+    (panels windward, θ > 0). Los paneles en sombra aerodinámica (leeward) se asume que tienen
+    Cp = 0, lo que es una aproximación conservadora y coherente con la física hipersónica.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 2. MÉTODO MN -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="mn">
+  <div class="shead"><span class="snum">02</span><h2>Método de Newton (MN)</h2><div class="sline"></div></div>
+
+  <p>
+    El <strong>Método de Newton</strong> (también conocido como teoría de impacto de Newton) supone
+    que las partículas del fluido incidente golpean la superficie y transfieren únicamente su componente
+    de momento normal. La presión en cada panel depende sólo del ángulo local θ entre la normal al
+    panel y la dirección del flujo libre, siendo θ = 90° – δ donde δ es el ángulo de inclinación
+    local respecto al flujo.
+  </p>
+
+  <h3>Definición del ángulo local</h3>
+  <p>
+    Sea <strong>n̂</strong> la normal exterior de un panel triangular y <strong>V̂∞</strong> el vector
+    unitario de velocidad del flujo incidente. El coseno del ángulo entre ambos es:
+  </p>
+  <div class="eq-box">
+    <div class="eq-label">ÁNGULO LOCAL — PRODUCTO ESCALAR</div>
+    \[ \cos\theta = -\hat{n} \cdot \hat{V}_\infty \]
+    <p style="font-size:.85rem;color:var(--muted);margin-top:8px;margin-bottom:0">
+      El signo negativo es porque la normal apunta hacia fuera del sólido y el flujo apunta
+      hacia él. Si cos θ &lt; 0, el panel está en sombra (leeward) y se asigna C_p = 0.
+    </p>
+  </div>
+
+  <h3>Coeficiente de presión — Newton</h3>
+  <div class="eq-box">
+    <div class="eq-label">FÓRMULA MN</div>
+    \[
+    C_p^{MN} = \begin{cases}
+      2\sin^2\theta = 2\cos^2\delta & \text{si } \hat{n}\cdot\hat{V}_\infty < 0 \quad (\text{cara barlovento}) \\
+      0                              & \text{si } \hat{n}\cdot\hat{V}_\infty \geq 0 \quad (\text{cara en sombra})
+    \end{cases}
+    \]
+  </div>
+  <p>
+    donde θ es el ángulo entre la normal al panel y el flujo (<strong>θ = 0 significa panel
+    perpendicular al flujo</strong>, es decir, máxima presión), y δ = 90° – θ es el ángulo
+    complementario (ángulo entre la superficie y el flujo).
+  </p>
+
+  <h3>Implementación discreta sobre malla STL</h3>
+  <p>
+    Para una malla triangular con N_f paneles, cada panel i tiene:
+  </p>
+  <ul>
+    <li>Centro geométrico <strong>c_i</strong></li>
+    <li>Área <em>A_i</em></li>
+    <li>Normal exterior unitaria <strong>n̂_i</strong></li>
+  </ul>
+  <div class="eq-box">
+    <div class="eq-label">Cp POR PANEL — IMPLEMENTACIÓN</div>
+    \[
+    c_{p,i} = \begin{cases}
+      2\,(\hat{n}_i \cdot (-\hat{V}_\infty))^2 & \text{si } \hat{n}_i \cdot \hat{V}_\infty < 0 \\
+      0 & \text{en otro caso}
+    \end{cases}
+    \]
+  </div>
+
+  <h3>Propiedades del método MN</h3>
+  <ul>
+    <li><strong>Independiente de M∞:</strong> No hay dependencia en el número de Mach. El mismo Cp se
+        obtiene para M=2 que para M=20, lo cual es una limitación conocida.</li>
+    <li><strong>Límite M → ∞:</strong> Es la solución exacta en ese límite para gas perfecto.</li>
+    <li><strong>CD teórico esfera = 1.0:</strong> Para una esfera perfecta, integrando 2sin²θ sobre
+        la semiesfera delantera se obtiene exactamente CD = 1.0 (referencia clásica).</li>
+    <li><strong>Simetría axial:</strong> Para α = 0 en cuerpos axisimétricos, CL = CM = 0 exactamente.</li>
+  </ul>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 3. MÉTODO MNM -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="mnm">
+  <div class="shead"><span class="snum">03</span><h2>Método de Newton Modificado (MNM)</h2><div class="sline"></div></div>
+
+  <p>
+    El <strong>Método de Newton Modificado</strong> introduce la dependencia con el número de Mach
+    mediante el coeficiente de presión de punto de remanso (stagnation point) calculado con la
+    fórmula exacta de Pitot-Rayleigh para flujo con onda de choque normal delante de la geometría.
+    Este factor cp,max escala la distribución de presión de Newton.
+  </p>
+
+  <h3>Presión de remanso detrás de onda de choque normal</h3>
+  <p>
+    La relación de presiones totales a través de una onda de choque normal (fórmula de Rayleigh–Pitot)
+    para gas perfecto con γ = 1.4 es:
+  </p>
+  <div class="eq-box">
+    <div class="eq-label">FÓRMULA DE RAYLEIGH–PITOT</div>
+    \[
+    \frac{p_{02}}{p_\infty} =
+      \left[\frac{(\gamma+1)^2 M_\infty^2}{4\gamma M_\infty^2 - 2(\gamma-1)}\right]^{\gamma/(\gamma-1)}
+      \cdot
+      \frac{1-\gamma + 2\gamma M_\infty^2}{\gamma+1}
+    \]
+  </div>
+
+  <h3>cp,max — Coeficiente de presión máximo de punto de remanso</h3>
+  <div class="eq-box">
+    <div class="eq-label">cp,max — FÓRMULA</div>
+    \[
+    c_{p,\text{max}} = \frac{p_{02} - p_\infty}{\frac{1}{2}\rho_\infty V_\infty^2}
+    = \frac{2}{\gamma M_\infty^2}\left(
+        \left[\frac{(\gamma+1)^2 M_\infty^2}{4\gamma M_\infty^2 - 2(\gamma-1)}\right]^{\gamma/(\gamma-1)}
+        \cdot
+        \frac{1-\gamma + 2\gamma M_\infty^2}{\gamma+1}
+      - 1\right)
+    \]
+  </div>
+  <p>
+    donde γ = 1.4 para aire diatómico en condiciones de Mach hipersónico moderado.
+    Esta es la implementación directa de la función <code>cpmax_analytic(M, gamma=1.4)</code>.
+  </p>
+
+  <h3>Coeficiente de presión — Newton Modificado</h3>
+  <div class="eq-box">
+    <div class="eq-label">FÓRMULA MNM</div>
+    \[
+    C_p^{MNM} = \begin{cases}
+      c_{p,\text{max}}(M_\infty, \gamma) \cdot \sin^2\theta & \text{si panel en barlovento} \\
+      0 & \text{si panel en sombra}
+    \end{cases}
+    \]
+  </div>
+  <p>
+    La diferencia clave respecto a MN es el factor multiplicador: en lugar de la constante 2,
+    se usa cp,max que depende de M∞ y γ. Para M∞ → ∞, cp,max → 2, recuperando exactamente
+    la teoría de Newton pura.
+  </p>
+
+  <h3>Comportamiento asintótico</h3>
+  <div class="eq-box">
+    <div class="eq-label">LÍMITE DE ALTA VELOCIDAD</div>
+    \[
+    \lim_{M_\infty \to \infty} c_{p,\text{max}} = 2
+    \quad \Rightarrow \quad
+    C_p^{MNM} \xrightarrow[M_\infty \to \infty]{} C_p^{MN} = 2\sin^2\theta
+    \]
+  </div>
+
+  <h3>CD de la esfera — Resultado analítico MNM</h3>
+  <p>
+    Para la esfera, integrando el Cp de Newton Modificado sobre la superficie iluminada:
+  </p>
+  <div class="eq-box">
+    <div class="eq-label">CD ESFERA — MNM ANALÍTICO</div>
+    \[
+    C_D^{MNM}(\text{esfera}) = \frac{c_{p,\text{max}}}{2}
+    \]
+  </div>
+  <p>
+    Este resultado se usa directamente como verificación: el CD numérico de la esfera debe
+    coincidir con cp,max/2. Para M∞ = 8 (γ = 1.4), cp,max ≈ 1.832, luego CD_esfera ≈ 0.916.
+  </p>
+
+  <div class="note-box">
+    <strong>Nota práctica:</strong> La diferencia entre MN (CD=1.0 siempre) y MNM (CD=cp,max/2 &lt; 1.0)
+    para la esfera refleja que a Mach finito la presión de remanso real es menor que la predicha
+    por el límite hipersónico puro. A M∞ = 2 la diferencia es significativa; a M∞ = 20 es pequeña.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 4. EJES Y REFERENCIA -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="ejes">
+  <div class="shead"><span class="snum">04</span><h2>Convenciones de ejes y definición de α</h2><div class="sline"></div></div>
+
+  <h3>Sistema de referencia — Body Frame STL</h3>
+  <p>
+    Las geometrías STL vienen en un sistema de referencia fijo al cuerpo con las siguientes
+    convenciones adoptadas en este proyecto:
+  </p>
+  <ul>
+    <li><strong>Eje X:</strong> Lateral (envergadura). Positivo hacia la derecha mirando desde arriba.</li>
+    <li><strong>Eje Y:</strong> Axial (eje de simetría). El morro apunta en dirección Y mínima (y_min).</li>
+    <li><strong>Eje Z:</strong> Vertical. Positivo hacia arriba.</li>
+    <li><strong>Unidades:</strong> Milímetros (mm) en el archivo STL; se convierten a metros para los
+        cálculos de coeficientes (S_ref, L_ref en m²/m).</li>
+  </ul>
+
+  <h3>Ángulo de ataque α</h3>
+  <p>
+    El ángulo de ataque α se define como el ángulo entre la velocidad del flujo libre y el eje axial
+    del cuerpo (eje Y). Para α &gt; 0, el flujo llega ligeramente desde abajo (morro arriba):
+  </p>
+  <div class="eq-box">
+    <div class="eq-label">VECTOR VELOCIDAD DEL FLUJO LIBRE</div>
+    \[
+    \hat{V}_\infty = \begin{pmatrix} 0 \\ -\cos\alpha \\ -\sin\alpha \end{pmatrix}
+    \]
+    <p style="font-size:.85rem;color:var(--muted);margin-top:8px;margin-bottom:0">
+      α = 0°: flujo paralelo al eje axial. α = 90°: flujo perpendicular (impacto frontal puro).
+    </p>
+  </div>
+
+  <h3>Ejes viento (Wind Axes)</h3>
+  <p>
+    Los coeficientes aerodinámicos se expresan en los <strong>ejes viento</strong>, alineados con
+    la dirección de vuelo. Los vectores directores son:
+  </p>
+  <div class="eq-box">
+    <div class="eq-label">TRIEDRO DE EJES VIENTO</div>
+    \[
+    \hat{e}_D = \hat{V}_\infty = \begin{pmatrix}0\\-\cos\alpha\\-\sin\alpha\end{pmatrix}, \quad
+    \hat{e}_M = \hat{x} = \begin{pmatrix}1\\0\\0\end{pmatrix}, \quad
+    \hat{e}_L = \hat{e}_M \times \hat{e}_D
+    \]
+    <p style="font-size:.85rem;color:var(--muted);margin-top:8px;margin-bottom:0">
+      ê_D = dirección de drag (paralela al flujo). ê_L = dirección de lift (perpendicular al flujo,
+      en el plano de simetría). ê_M = eje de momento de cabeceo (eje X del body frame).
+    </p>
+  </div>
+
+  <h3>Integración de fuerzas y momentos</h3>
+  <p>
+    Para cada panel i de área A_i, normal n̂_i y coeficiente de presión cp,i, la fuerza de presión
+    adimensional es:
+  </p>
+  <div class="eq-box">
+    <div class="eq-label">CONTRIBUCIÓN AL VECTOR DE FUERZA ADIMENSIONAL</div>
+    \[
+    \mathrm{d}\vec{F}_i = -c_{p,i} \cdot A_i \cdot \hat{n}_i
+    \]
+  </div>
+  <div class="eq-box">
+    <div class="eq-label">COEFICIENTES AERODINÁMICOS (INTEGRACIÓN SUMA DISCRETA)</div>
+    \[
+    C_D = \frac{1}{S_\text{ref}} \sum_i c_{p,i} A_i \,(\hat{n}_i \cdot \hat{e}_D)
+    \]
+    \[
+    C_L = -\frac{1}{S_\text{ref}} \sum_i c_{p,i} A_i \,(\hat{n}_i \cdot \hat{e}_L)
+    \]
+    \[
+    C_M = \frac{1}{S_\text{ref} \cdot L_\text{ref}}
+          \sum_i c_{p,i} A_i \,\left[(\vec{c}_i - \vec{r}_\text{ref}) \times \hat{n}_i\right] \cdot \hat{e}_M
+    \]
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 5. REFERENCIAS AERODINÁMICAS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="refs-aero">
+  <div class="shead"><span class="snum">05</span><h2>Referencias aerodinámicas</h2><div class="sline"></div></div>
+
+  <p>
+    Para adimensionalizar los coeficientes de fuerza y momento se necesitan tres referencias:
+    el área de referencia S_ref, la longitud de referencia L_ref, y el punto de reducción del
+    momento r_ref.
+  </p>
+
+  <h3>Cápsula ARD</h3>
+  <ul>
+    <li>
+      <strong>S_ref:</strong> Área del bounding box frontal. Se calcula como el producto de las
+      extensiones del bounding box de la malla en los ejes X y Z:
+      S_ref = extent_X × extent_Z. Esto aproxima el área de la sección transversal proyectada.
+    </li>
+    <li>
+      <strong>L_ref:</strong> Extensión del bounding box en el eje axial (Y):
+      L_ref = extent_Y.
+    </li>
+    <li>
+      <strong>r_ref:</strong> Centroide ponderado por áreas de todos los paneles (centro geométrico
+      ponderado). Sirve como punto de referencia para el cálculo de momentos.
+    </li>
+  </ul>
+
+  <div class="eq-box">
+    <div class="eq-label">DEFINICIONES — CÁPSULA</div>
+    \[
+    S_\text{ref} = \Delta x \cdot \Delta z, \quad
+    L_\text{ref} = \Delta y, \quad
+    \vec{r}_\text{ref} = \frac{\sum_i A_i \vec{c}_i}{\sum_i A_i}
+    \]
+  </div>
+
+  <h3>Esfera</h3>
+  <ul>
+    <li>
+      <strong>S_ref = π R²:</strong> Área del círculo máximo de la esfera, siendo R el radio
+      estimado a partir del área total de la malla: R = √(A_total / 4π).
+    </li>
+    <li>
+      <strong>L_ref = 2R:</strong> Diámetro de la esfera.
+    </li>
+    <li>
+      <strong>r_ref = (0, 0, 0):</strong> Centro de la esfera, asumido en el origen.
+    </li>
+  </ul>
+
+  <div class="eq-box">
+    <div class="eq-label">DEFINICIONES — ESFERA</div>
+    \[
+    R = \sqrt{\frac{A_\text{total}}{4\pi}}, \quad
+    S_\text{ref} = \pi R^2, \quad
+    L_\text{ref} = 2R, \quad
+    \vec{r}_\text{ref} = \vec{0}
+    \]
+  </div>
+
+  <div class="warn-box">
+    <strong>Atención — Unidades:</strong> Los archivos STL de la cápsula ARD están en milímetros.
+    Al cargar la malla, las coordenadas se leen en mm, por lo que S_ref se obtiene en mm² y L_ref
+    en mm. Para coeficientes adimensionales esto no importa (los m² se cancelan), pero los valores
+    numéricos de S_ref y L_ref reportados en el informe están en las unidades del STL (mm o m
+    según conversión aplicada).
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 6. MALLAS STL -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="mallas">
+  <div class="shead"><span class="snum">06</span><h2>Mallas STL utilizadas</h2><div class="sline"></div></div>
+
+  <p>
+    El estudio usa cuatro mallas triangulares de la cápsula ARD con distinta resolución, más
+    la malla de la esfera de validación. Todas se cargan con <code>trimesh</code>.
+  </p>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th>Archivo</th>
+          <th>N° caras</th>
+          <th>N° vértices (aprox)</th>
+          <th>Tipo</th>
+          <th>Descripción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>PruebaARD.stl</code></td>
+          <td>182</td>
+          <td>~93</td>
+          <td>Muy gruesa</td>
+          <td>Malla de prueba rápida. Alta discretización por cara, útil para testing.</td>
+        </tr>
+        <tr>
+          <td><code>PruebaARD2.stl</code></td>
+          <td>400 022</td>
+          <td>~200 013</td>
+          <td>Ultra-fina</td>
+          <td>Malla de referencia de máxima resolución. Se usa como referencia en el análisis de convergencia.</td>
+        </tr>
+        <tr>
+          <td><code>PruebaARD3.stl</code></td>
+          <td>1 510</td>
+          <td>~757</td>
+          <td>Media (PRINCIPAL)</td>
+          <td>Malla de uso principal en todos los 9 casos del TP. Balance óptimo precisión/coste.</td>
+        </tr>
+        <tr>
+          <td><code>PruebaARD4.stl</code></td>
+          <td>1 510</td>
+          <td>~757</td>
+          <td>Media alternativa</td>
+          <td>Malla con mismo número de caras que ARD3 pero triangulación diferente. Útil para estudio de influencia de la topología de malla.</td>
+        </tr>
+        <tr>
+          <td><code>esfera.stl</code></td>
+          <td>variable</td>
+          <td>variable</td>
+          <td>Validación</td>
+          <td>Esfera de radio unitario. Se usa para verificar el método (CD_MN = 1.0, CL = CM = 0 para α=0).</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Carga y procesamiento</h3>
+  <p>
+    Todas las mallas se cargan con <code>trimesh.load(path, force="mesh")</code>, que garantiza
+    una representación consistente de vértices y caras. Para cada malla se calculan:
+  </p>
+  <ul>
+    <li><strong>Normales por cara:</strong> producto vectorial (v1-v0) × (v2-v0), normalizado.</li>
+    <li><strong>Áreas por cara:</strong> |cross| / 2.</li>
+    <li><strong>Centros geométricos:</strong> (v0 + v1 + v2) / 3.</li>
+  </ul>
+
+  <div class="info-box">
+    <strong>Orientación de normales:</strong> Se asume que las normales de los archivos STL apuntan
+    hacia el exterior del sólido (convención estándar). Si el STL tiene normales invertidas, los
+    paneles barlovento/sotavento se clasificarían erróneamente. Se verifica que el número de paneles
+    windward sea coherente con la geometría esperada.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 7. SENSIBILIDAD DE MALLA -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="sensibilidad">
+  <div class="shead"><span class="snum">07</span><h2>Análisis de sensibilidad de malla</h2><div class="sline"></div></div>
+
+  <p>
+    El análisis de sensibilidad de malla (mesh convergence study) tiene por objetivo cuantificar
+    el error numérico introducido por la discretización geométrica. Para los LSIM, la única fuente
+    de error numérico es la representación discreta de la geometría continua — no hay difusión
+    numérica ni errores de truncamiento de la EDP subyacente.
+  </p>
+
+  <h3>Metodología</h3>
+  <p>
+    Se calculan CD, CL y CM con las cuatro mallas de la cápsula ARD para α = 10° y M∞ = 8,
+    usando ambos métodos (MN y MNM). Los resultados se normalizan respecto a la malla más fina
+    (ARD2, 400k caras) para obtener el error relativo:
+  </p>
+  <div class="eq-box">
+    <div class="eq-label">ERROR RELATIVO RESPECTO A MALLA DE REFERENCIA</div>
+    \[
+    \varepsilon_{C_X}^{(n)} = \frac{|C_X^{(n)} - C_X^{ref}|}{|C_X^{ref}|} \times 100\%
+    \]
+    <p style="font-size:.85rem;color:var(--muted);margin-top:8px;margin-bottom:0">
+      donde el superíndice (n) indica la malla con n caras y "ref" es la malla más fina.
+    </p>
+  </div>
+
+  <h3>Esperanza de convergencia</h3>
+  <p>
+    Para los LSIM, el error numérico en CD debe disminuir monótonamente al aumentar el número
+    de caras. La tasa de convergencia teórica es O(1/N_f) ya que cada cara introduce un error
+    O(h²) en área y O(h) en normal (con h ∝ 1/√N_f, el error global es O(h²) ≈ O(1/N_f)).
+  </p>
+
+  <h3>Criterio de suficiencia de malla</h3>
+  <ul>
+    <li>
+      Se considera que la malla ARD3 (1510 caras) es suficiente si el error relativo en CD
+      respecto a ARD2 es inferior al <strong>5%</strong>.
+    </li>
+    <li>
+      El check C6 verifica específicamente este criterio para la malla gruesa (ARD, 182 caras)
+      vs la malla media (ARD3, 1510 caras).
+    </li>
+  </ul>
+
+  <div class="note-box">
+    <strong>Interpretación física:</strong> A pesar de ser un cuerpo de sólo 182 triángulos,
+    la malla ARD puede dar resultados razonablemente precisos en CD porque la geometría de la
+    cápsula es suave (sin esquinas agudas) y los LSIM son robustos a la discretización. Los
+    errores más grandes se esperan en CL y CM, que son más sensibles a la resolución local
+    de la geometría en las regiones laterales.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 8. RESULTADOS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="resultados">
+  <div class="shead"><span class="snum">08</span><h2>Resultados de los 9 casos obligatorios</h2><div class="sline"></div></div>
+
+  <p>
+    Los 9 casos obligatorios del TP cubren las combinaciones de geometría (esfera/cápsula),
+    método (MN/MNM), ángulo de ataque (α = 0°, 10°, 20°) y número de Mach (M∞ = 2, 8)
+    requeridas para las pruebas de coherencia C1–C6.
+  </p>
+
+  <div id="cases-loading" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);
+    padding:20px;text-align:center">Cargando resultados desde results.json...</div>
+
+  <div class="tw" id="cases-table-wrap" style="display:none">
+    <table>
+      <thead>
+        <tr>
+          <th>Case ID</th>
+          <th>Geometría</th>
+          <th>Método</th>
+          <th>M∞</th>
+          <th>α (°)</th>
+          <th>CD</th>
+          <th>CL</th>
+          <th>CM</th>
+          <th>N windward</th>
+        </tr>
+      </thead>
+      <tbody id="cases-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="cases-error" style="display:none" class="warn-box">
+    No se pudo cargar <code>../results.json</code>. Para ver los resultados, abra este archivo
+    desde un servidor local o desde el mismo directorio que el informe principal.
+  </div>
+
+  <h3>Descripción de los casos</h3>
+  <ol>
+    <li><strong>sphere_MN_a0_M8:</strong> Esfera · MN · α=0° · M=8. Referencia simetría. CD≈1.0, CL≈0, CM≈0.</li>
+    <li><strong>sphere_MNM_a0_M2:</strong> Esfera · MNM · α=0° · M=2. CD=cp,max(M=2)/2 &lt; 1.0.</li>
+    <li><strong>sphere_MNM_a0_M8:</strong> Esfera · MNM · α=0° · M=8. CD=cp,max(M=8)/2 ≈ 0.916.</li>
+    <li><strong>capsule_MN_a0_M8:</strong> Cápsula · MN · α=0° · M=8. CL≈0, CM≈0 (simetría axial).</li>
+    <li><strong>capsule_MNM_a0_M8:</strong> Cápsula · MNM · α=0° · M=8. CL≈0, CM≈0.</li>
+    <li><strong>capsule_MNM_a10_M8:</strong> Cápsula · MNM · α=10° · M=8. CL &gt; 0 (asimetría).</li>
+    <li><strong>capsule_MNM_a20_M8:</strong> Cápsula · MNM · α=20° · M=8. CL mayor que a 10°.</li>
+    <li><strong>capsule_MN_mesh_coarse_a10_M8:</strong> Malla gruesa (182 caras) · MN · α=10° · M=8.</li>
+    <li><strong>capsule_MN_mesh_fine_a10_M8:</strong> Malla media (1510 caras) · MN · α=10° · M=8.</li>
+  </ol>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 9. CHECKS C1-C6 -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="checks">
+  <div class="shead"><span class="snum">09</span><h2>Checks de coherencia C1–C6</h2><div class="sline"></div></div>
+
+  <p>
+    Los seis checks de coherencia verifican que los resultados son físicamente consistentes
+    con las propiedades conocidas de los métodos de inclinación local. Son condiciones
+    <em>necesarias</em> pero no suficientes para la corrección del código.
+  </p>
+
+  <div class="ck-card">
+    <div class="ck-num">C1</div>
+    <div>
+      <div class="ck-title">Coherencia interna — Signos y magnitudes</div>
+      <div class="ck-desc">
+        <strong>Qué verifica:</strong> CD ≥ 0 en todos los casos, y |CL|, |CM| &lt; 50 en todos los casos.<br>
+        <strong>Fundamento físico:</strong> El drag aerodinámico siempre se opone al movimiento,
+        por lo que CD ≥ 0 siempre. Para los LSIM de cuerpos romos hipersónicos, los coeficientes
+        nunca alcanzan valores del orden de 50 (CD típico &lt; 2.0 para cuerpos romos).<br>
+        <strong>Criterio de paso:</strong> CD_i ≥ 0 y |CL_i|, |CM_i| &lt; 50 para todos los casos i.
+      </div>
+    </div>
+  </div>
+
+  <div class="ck-card">
+    <div class="ck-num">C2</div>
+    <div>
+      <div class="ck-title">Simetría de la esfera α = 0°</div>
+      <div class="ck-desc">
+        <strong>Qué verifica:</strong> |CL| &lt; 10⁻³ y |CM| &lt; 10⁻³ para los tres casos de esfera con α=0°.<br>
+        <strong>Fundamento físico:</strong> La esfera es un cuerpo perfectamente axisimétrico.
+        Para α = 0°, el flujo es exactamente axial y la distribución de presión es simétrica
+        respecto a cualquier plano que contenga el eje axial. Por tanto, CL = CM = 0 exactamente
+        (a nivel de aritmética de punto flotante, ~10⁻¹⁷).<br>
+        <strong>Criterio de paso:</strong> Tolerancia 10⁻³ para absorber posibles imperfecciones
+        geométricas de la malla STL.
+      </div>
+    </div>
+  </div>
+
+  <div class="ck-card">
+    <div class="ck-num">C3</div>
+    <div>
+      <div class="ck-title">Sensibilidad al Mach — Esfera MNM</div>
+      <div class="ck-desc">
+        <strong>Qué verifica:</strong> CD_MNM(M=8) &gt; CD_MNM(M=2) para la esfera con α=0°.<br>
+        <strong>Fundamento físico:</strong> CD_MNM(esfera) = cp,max/2. La función cp,max(M∞)
+        es monótonamente creciente: a mayor Mach, mayor compresión en el punto de remanso,
+        mayor cp,max, mayor CD. Se comprueba que el código implementa correctamente la
+        dependencia con Mach.<br>
+        <strong>Criterio de paso:</strong> CD(M=8) &gt; CD(M=2) + 10⁻³.
+      </div>
+    </div>
+  </div>
+
+  <div class="ck-card">
+    <div class="ck-num">C4</div>
+    <div>
+      <div class="ck-title">Simetría de la cápsula α = 0°</div>
+      <div class="ck-desc">
+        <strong>Qué verifica:</strong> |CL| &lt; 5×10⁻³ y |CM| &lt; 5×10⁻³ para los casos de
+        cápsula con α=0° (MN y MNM).<br>
+        <strong>Fundamento físico:</strong> La cápsula ARD es un cuerpo axisimétrico. Para α=0°,
+        debe cumplir CL = CM = 0 por la misma razón que la esfera. La tolerancia es ligeramente
+        mayor (5×10⁻³) porque la cápsula tiene geometría más compleja y la malla triangular puede
+        introducir pequeñas asimetrías numéricas.<br>
+        <strong>Criterio de paso:</strong> Verificación numérica de la axisimetría del código.
+      </div>
+    </div>
+  </div>
+
+  <div class="ck-card">
+    <div class="ck-num">C5</div>
+    <div>
+      <div class="ck-title">CL crece monótonamente con α — Cápsula MNM</div>
+      <div class="ck-desc">
+        <strong>Qué verifica:</strong> |CL(α=10°)| &gt; |CL(α=0°)| + 10⁻³ y |CL(α=20°)| &gt; |CL(α=10°)| + 10⁻³
+        para la cápsula MNM a M∞ = 8.<br>
+        <strong>Fundamento físico:</strong> Al aumentar α, la asimetría de la presión entre las
+        caras delantera superior e inferior aumenta, generando más sustentación. Para ángulos
+        moderados (α &lt; 30–40°), CL debe ser monótonamente creciente. Cualquier decrecimiento
+        indicaría un error en la definición de los ejes o en la integración de fuerzas.<br>
+        <strong>Criterio de paso:</strong> Monotonía de CL con α.
+      </div>
+    </div>
+  </div>
+
+  <div class="ck-card">
+    <div class="ck-num">C6</div>
+    <div>
+      <div class="ck-title">Sensibilidad a la malla — CD dentro del 5%</div>
+      <div class="ck-desc">
+        <strong>Qué verifica:</strong> |CD_fino - CD_grueso| / CD_fino &lt; 5% para el caso
+        MN α=10° M=8, comparando la malla gruesa (182 caras) con la malla media (1510 caras).<br>
+        <strong>Fundamento físico:</strong> Un resultado de referencia es aceptable si la malla
+        tiene suficiente resolución. Una diferencia &lt; 5% indica convergencia práctica.<br>
+        <strong>Criterio de paso:</strong> ΔCD &lt; 5% relativo.
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- 10. BIBLIOGRAFÍA -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="biblio">
+  <div class="shead"><span class="snum">10</span><h2>Bibliografía y referencias</h2><div class="sline"></div></div>
+
+  <ol style="padding-left:24px;line-height:2">
+    <li>
+      <strong>Anderson, J. D.</strong> (2006). <em>Hypersonic and High Temperature Gas Dynamics</em>,
+      2nd ed. AIAA Education Series. Capítulos 4–6: Local Surface Inclination Methods, Newtonian
+      Flow Theory.
+    </li>
+    <li>
+      <strong>Bertin, J. J. &amp; Cummings, R. M.</strong> (2006). <em>Aerodynamics for Engineers</em>,
+      5th ed. Pearson Prentice Hall. Hipersónico: métodos de inclinación local, validación
+      con datos experimentales.
+    </li>
+    <li>
+      <strong>Hirschel, E. H.</strong> (2005). <em>Basics of Aerothermodynamics</em>. Springer.
+      Contexto de reentrada atmosférica, regímenes de flujo hipersónico, coeficientes de presión.
+    </li>
+    <li>
+      <strong>Lees, L.</strong> (1955). "Hypersonic Flow." <em>Proceedings of the Fifth International
+      Aeronautical Conference</em>, Los Angeles, pp. 241–276. Formulación original de los métodos
+      de inclinación local.
+    </li>
+    <li>
+      <strong>Newton, I.</strong> (1726). <em>Principia Mathematica</em>, 3rd ed. Libro II, Proposición
+      34–35. Teoría de resistencia de fluidos (precursora del método de Newton en aerodinámica).
+    </li>
+    <li>
+      <strong>Trimesh library.</strong> Python package for loading and using triangular meshes.
+      <code>https://trimesh.org</code>. Usado para la carga y manipulación de las mallas STL.
+    </li>
+    <li>
+      <strong>Plotly.js</strong> v2.35.2. Open-source JavaScript graphing library.
+      <code>https://plotly.com/javascript/</code>. Usado para las visualizaciones 3D interactivas
+      y las gráficas 2D del informe.
+    </li>
+    <li>
+      <strong>ESA ARD (Atmospheric Reentry Demonstrator).</strong> European Space Agency mission
+      (1998). Cápsula de reentrada usada como geometría de referencia en este trabajo práctico.
+      La forma cónico-esférica es representativa de los vehículos de reentrada actuales.
+    </li>
+  </ol>
+
+  <div class="info-box" style="margin-top:28px">
+    <strong>Nota sobre implementación:</strong> El código Python del solver está en
+    <code>src/MN.py</code> y <code>src/MNM.py</code>. El generador del informe HTML está en
+    <code>src/generate_3d_report.py</code>. Los resultados se exportan a <code>results/results.json</code>
+    y el informe principal se genera como <code>results/report_3d.html</code>.
+  </div>
+</div>
+
+
+<footer>
+  <span>AAVFR · TP1 · Documentación Técnica</span>
+  <span>Máster en Sistemas Espaciales · UPM · IDR/UPM</span>
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+// Cargar resultados desde results.json relativo
+fetch('../results.json')
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(data => {
+    document.getElementById('cases-loading').style.display = 'none';
+    document.getElementById('cases-table-wrap').style.display = 'block';
+    const tbody = document.getElementById('cases-tbody');
+    (data.cases || []).forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-size:9px">${c.case_id || '—'}</td>
+        <td>${c.geometry_name || '—'}</td>
+        <td><span class="tag ${c.model}">${c.model}</span></td>
+        <td>${c.Mach}</td>
+        <td>${c.alpha_deg}</td>
+        <td class="cd">${(+c.CD).toFixed(5)}</td>
+        <td class="cl">${(+c.CL).toFixed(5)}</td>
+        <td class="cm">${(+c.CM).toFixed(5)}</td>
+        <td>${c._n_windward || '—'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  })
+  .catch(err => {
+    document.getElementById('cases-loading').style.display = 'none';
+    document.getElementById('cases-error').style.display = 'block';
+    console.warn('No se pudo cargar results.json:', err);
+  });
+</script>
+</body>
+</html>

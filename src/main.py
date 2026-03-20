@@ -32,14 +32,14 @@ config = {
 
     # ── Geometrías STL ──────────────────────────────────────────────────────
     "STL_CAPSULE": DATA_DIR / "Capsula" / "PruebaARD3.stl",   # malla principal
-    "STL_SPHERE":  DATA_DIR / "esfera.stl",
+    "STL_SPHERE":  DATA_DIR / "esfera.stl",                 
     "STL_COARSE":  DATA_DIR / "Capsula" / "PruebaARD.stl",    # 182 caras
     "STL_FINE":    DATA_DIR / "Capsula" / "PruebaARD4.stl",   # 1510 caras
 
     # ── Condiciones de flujo ────────────────────────────────────────────────
     "ALPHAS_DEG": [0.0, 10.0, 20.0, 30.0],        # barrido en alpha (para sweeps)
     "MACH":       8.0,                             # Mach para el barrido en alpha
-    "MACH_SWEEP": [2.0, 4.0, 8.0, 12.0, 15.0, 20.0],  # Machs para barrido Mach
+    "MACH_SWEEP": [1.0, 2.0, 4.0, 8.0, 12.0, 15.0, 20.0],  # Machs para barrido Mach
     "GAMMA":      1.4,
 
     # ── Mapa de Cp 3D (None = no generar) ──────────────────────────────────

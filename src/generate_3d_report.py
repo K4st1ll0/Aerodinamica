@@ -156,6 +156,64 @@ def _capsule_refs(mesh, geom):
     return S_ref, L_ref, r_ref
 
 
+def _sphere_refs(geom):
+    areas = geom["areas"]
+    R = np.sqrt(areas.sum() / (4 * np.pi))
+    return float(np.pi * R**2), float(2 * R), np.zeros(3)
+
+
+def compute_sphere_interactive_data(
+    sphere_path: Path,
+    alphas:      list[float],
+    machs:       list[float],
+    gamma:       float = 1.4,
+) -> tuple[dict, dict]:
+    """Pre-computa Cp maps de la esfera para todos los selectores."""
+    if not _SOLVER_OK:
+        return {}, {}
+    if not Path(sphere_path).exists():
+        print(f"  [SKIP] esfera — STL no encontrado: {sphere_path}")
+        return {}, {}
+
+    print("  Precomputando esfera...")
+    mesh = _stl_load(sphere_path)
+    geom = _face_geom(mesh)
+    c, a, n = geom["centers"], geom["areas"], geom["normals"]
+    S, L, r = _sphere_refs(geom)
+    verts = np.asarray(mesh.vertices, dtype=float)
+    faces = np.asarray(mesh.faces,    dtype=int)
+
+    geom_db = {"sphere": {"verts": verts, "faces": faces}}
+    cp_db   = {"sphere": {"MN": {}, "MNM": {}}}
+
+    for alpha in alphas:
+        eD, eL, eM = _wind_axes(alpha)
+        ak = str(int(alpha))
+
+        res = _solve_mn(
+            centers=c, areas=a, normals=n, alpha_deg=alpha,
+            S_ref=S, L_ref=L, r_ref=r, eD=eD, eL=eL, eM=eM,
+        )
+        vcp = face_cp_to_vertex_cp(verts, faces, res["cp"])
+        cp_db["sphere"]["MN"].setdefault(ak, {})["8"] = {
+            "cp": vcp, "CD": res["CD"], "CL": res["CL"], "CM": res["CM"],
+        }
+
+        cp_db["sphere"]["MNM"].setdefault(ak, {})
+        for mach in machs:
+            res = _solve_mnm(
+                centers=c, areas=a, normals=n, alpha_deg=alpha, Mach=mach,
+                S_ref=S, L_ref=L, r_ref=r, eD=eD, eL=eL, eM=eM, gamma=gamma,
+            )
+            vcp = face_cp_to_vertex_cp(verts, faces, res["cp"])
+            mk  = str(int(mach))
+            cp_db["sphere"]["MNM"][ak][mk] = {
+                "cp": vcp, "CD": res["CD"], "CL": res["CL"], "CM": res["CM"],
+            }
+
+    return geom_db, cp_db
+
+
 def compute_interactive_data(
     mesh_paths: dict[str, Path],
     alphas:     list[float],
@@ -273,7 +331,7 @@ def generate_3d_html(
 ) -> Path:
     # ── Rutas por defecto ────────────────────────────────────────────────────
     results_json = results_json or RESULTS_DIR / "results.json"
-    cp_csv       = cp_csv       or RESULTS_DIR / "cp_faces_mnm_a20_M8.csv"
+    cp_csv       = cp_csv       or RESULTS_DIR / "csv" / "cp_faces_mnm_a20_M8.csv"
     stl_capsule  = stl_capsule  or DATA_DIR   / "Capsula" / "PruebaARD3.stl"
     stl_sphere   = stl_sphere   or DATA_DIR   / "esfera.stl"
     stl_coarse   = stl_coarse   or DATA_DIR   / "Capsula" / "PruebaARD.stl"
@@ -317,10 +375,11 @@ def generate_3d_html(
 
     # ── Sweep CSVs ───────────────────────────────────────────────────────────
     sweep_mnm, sweep_mn, sweep_mach = [], [], []
+    _csv_dir = RESULTS_DIR / "csv"
     for path, store in [
-        (RESULTS_DIR / "results_mnm_M8.csv",         "mnm"),
-        (RESULTS_DIR / "results_mn.csv",              "mn"),
-        (RESULTS_DIR / "results_mnm_mach_sweep.csv", "mach"),
+        (_csv_dir / "results_mnm_M8.csv",         "mnm"),
+        (_csv_dir / "results_mn.csv",              "mn"),
+        (_csv_dir / "results_mnm_mach_sweep.csv", "mach"),
     ]:
         if path.exists():
             data = load_sweep_csv(path)
@@ -350,26 +409,95 @@ def generate_3d_html(
     ms_mn  = _mesh_series(mesh_mn)
     ms_mnm = _mesh_series(mesh_mnm)
 
-    # ── Analítico cp_max vs Mach ─────────────────────────────────────────────
-    mach_pts   = [2, 4, 6, 8, 10, 12, 15, 20, 30, 50]
+    # ── Pre-cómputo interactivo ───────────────────────────────────────────────
+    # Los alphas y Machs se derivan de los datos reales (sweep CSVs cargados antes)
+    _INTERACTIVE_ALPHAS = sorted(set(
+        [r["alpha_deg"] for r in sweep_mnm] or [0.0, 10.0, 20.0, 30.0]
+    ))
+    _INTERACTIVE_MACHS  = sorted(set(
+        [r["Mach"] for r in sweep_mach] or [2.0, 4.0, 8.0, 12.0, 15.0, 20.0]
+    ))
+
+    # ── Analítico cp_max vs Mach (mismo rango que el sweep) ─────────────────
+    mach_pts   = [int(m) for m in _INTERACTIVE_MACHS]
     cpmax_pts  = [round(cpmax_analytic(m), 5) for m in mach_pts]
     cd_mnm_pts = [round(cpmax_analytic(m) / 2, 5) for m in mach_pts]
-
-    # ── Pre-cómputo interactivo ───────────────────────────────────────────────
-    _INTERACTIVE_ALPHAS = [0.0, 10.0, 20.0, 30.0]
-    _INTERACTIVE_MACHS  = [2.0, 4.0, 8.0, 12.0, 15.0, 20.0]
     _INTERACTIVE_MESHES = {
         "PruebaARD":  DATA_DIR / "Capsula" / "PruebaARD.stl",
         "PruebaARD3": DATA_DIR / "Capsula" / "PruebaARD3.stl",
         "PruebaARD4": DATA_DIR / "Capsula" / "PruebaARD4.stl",
     }
-    print("\nPre-computando Cp interactivos...")
+    print("\nPre-computando Cp interactivos (cápsula)...")
     geom_db, cp_db = compute_interactive_data(
         _INTERACTIVE_MESHES, _INTERACTIVE_ALPHAS, _INTERACTIVE_MACHS
     )
     geom_js_str, cp_db_js_str = _serialize_cp_db(geom_db, cp_db)
     interactive_mesh_names = json.dumps(list(geom_db.keys()))
+
+    _SPHERE_ALPHAS = sorted(set([0.0] + _INTERACTIVE_ALPHAS))  # incluye α=0 siempre
+    _SPHERE_MACHS  = _INTERACTIVE_MACHS                         # mismo rango que cápsula
+    print("\nPre-computando Cp interactivos (esfera)...")
+    sph_geom_db, sph_cp_db = compute_sphere_interactive_data(
+        stl_sphere, _SPHERE_ALPHAS, _SPHERE_MACHS
+    )
+    sph_geom_js_str, sph_cp_db_js_str = _serialize_cp_db(sph_geom_db, sph_cp_db)
+    interactive_sphere_alphas = json.dumps([int(a) for a in _SPHERE_ALPHAS])
+    interactive_sphere_machs  = json.dumps([int(m) for m in _SPHERE_MACHS])
     print("  Hecho.")
+
+    # ── Extraer series para gráficas desde cp_db y sph_cp_db ───────────────
+    def _gcap(model, a, m):
+        try: return cp_db['PruebaARD3'][model][str(int(a))][str(int(m))]
+        except: return {}
+    def _gsph(model, a, m):
+        try: return sph_cp_db['sphere'][model][str(int(a))][str(int(m))]
+        except: return {}
+
+    _cap_a = [int(a) for a in sorted(_INTERACTIVE_ALPHAS)]
+    _cap_m = [int(m) for m in sorted(_INTERACTIVE_MACHS)]
+    _sph_a = [int(a) for a in sorted(_SPHERE_ALPHAS)]
+
+    # Cápsula vs alpha a M=8
+    cap_mn_CD  = [_gcap('MN',  a, 8).get('CD', None) for a in _cap_a]
+    cap_mn_CL  = [_gcap('MN',  a, 8).get('CL', None) for a in _cap_a]
+    cap_mn_CM  = [_gcap('MN',  a, 8).get('CM', None) for a in _cap_a]
+    cap_mnm_CD = [_gcap('MNM', a, 8).get('CD', None) for a in _cap_a]
+    cap_mnm_CL = [_gcap('MNM', a, 8).get('CL', None) for a in _cap_a]
+    cap_mnm_CM = [_gcap('MNM', a, 8).get('CM', None) for a in _cap_a]
+    cap_mnm_LD = [cl/cd if (cd and cd != 0) else None for cl, cd in zip(cap_mnm_CL, cap_mnm_CD)]
+    cap_mn_LD  = [cl/cd if (cd and cd != 0) else None for cl, cd in zip(cap_mn_CL, cap_mn_CD)]
+
+    # Cápsula vs Mach a alpha=0 (MNM)
+    cap_mnm_mach_CD = [_gcap('MNM', 0, m).get('CD', None) for m in _cap_m]
+    cap_mnm_mach_CL = [_gcap('MNM', 0, m).get('CL', None) for m in _cap_m]
+    cap_mnm_mach_CM = [_gcap('MNM', 0, m).get('CM', None) for m in _cap_m]
+
+    # Cápsula MNM: CD vs alpha para cada Mach (series)
+    cap_per_mach_CD = {str(int(m)): [_gcap('MNM', a, m).get('CD', None) for a in _cap_a] for m in _cap_m}
+    cap_per_mach_CL = {str(int(m)): [_gcap('MNM', a, m).get('CL', None) for a in _cap_a] for m in _cap_m}
+
+    # Esfera vs alpha a M=8
+    sph_mn_CD  = [_gsph('MN',  a, 8).get('CD', None) for a in _sph_a]
+    sph_mn_CL  = [_gsph('MN',  a, 8).get('CL', None) for a in _sph_a]
+    sph_mnm_CD = [_gsph('MNM', a, 8).get('CD', None) for a in _sph_a]
+    sph_mnm_CL = [_gsph('MNM', a, 8).get('CL', None) for a in _sph_a]
+
+    # Esfera vs Mach a alpha=0 (MNM)
+    sph_mnm_mach_CD = [_gsph('MNM', 0, m).get('CD', None) for m in [int(m) for m in sorted(_SPHERE_MACHS)]]
+
+    # Errores de malla relativos vs malla más fina
+    def _mesh_errors(rows):
+        if not rows: return [], [], [], []
+        ref = rows[-1]
+        def _err(v, r): return abs(v - r) / max(abs(r), 1e-10) * 100
+        return (
+            [int(r['n_faces']) for r in rows],
+            [_err(r['CD'], ref['CD']) for r in rows],
+            [_err(r['CL'], ref['CL']) for r in rows],
+            [_err(r['CM'], ref['CM']) for r in rows],
+        )
+    mesh_mn_n,  mesh_mn_eCD,  mesh_mn_eCL,  mesh_mn_eCM  = _mesh_errors(mesh_mn)
+    mesh_mnm_n, mesh_mnm_eCD, mesh_mnm_eCL, mesh_mnm_eCM = _mesh_errors(mesh_mnm)
 
     # ── Serialización geometrías ─────────────────────────────────────────────
     cx = _jf(verts_cap[:, 0]); cy = _jf(verts_cap[:, 1]); cz = _jf(verts_cap[:, 2])
@@ -434,14 +562,58 @@ def generate_3d_html(
         interactive_mesh_names=interactive_mesh_names,
         interactive_alphas=json.dumps([int(a) for a in _INTERACTIVE_ALPHAS]),
         interactive_machs=json.dumps([int(m) for m in _INTERACTIVE_MACHS]),
+        sph_geom_db_js=sph_geom_js_str,
+        sph_cp_db_js=sph_cp_db_js_str,
+        interactive_sphere_alphas=interactive_sphere_alphas,
+        interactive_sphere_machs=interactive_sphere_machs,
         js_cases=js_cases,
         checks_data=json.dumps(checks_data),
+        cap_a=json.dumps(_cap_a),
+        cap_m=json.dumps(_cap_m),
+        sph_a=json.dumps(_sph_a),
+        cap_mn_CD=json.dumps(cap_mn_CD), cap_mn_CL=json.dumps(cap_mn_CL), cap_mn_CM=json.dumps(cap_mn_CM),
+        cap_mnm_CD=json.dumps(cap_mnm_CD), cap_mnm_CL=json.dumps(cap_mnm_CL), cap_mnm_CM=json.dumps(cap_mnm_CM),
+        cap_mnm_LD=json.dumps(cap_mnm_LD), cap_mn_LD=json.dumps(cap_mn_LD),
+        cap_mnm_mach_CD=json.dumps(cap_mnm_mach_CD), cap_mnm_mach_CL=json.dumps(cap_mnm_mach_CL), cap_mnm_mach_CM=json.dumps(cap_mnm_mach_CM),
+        cap_per_mach_CD=json.dumps(cap_per_mach_CD), cap_per_mach_CL=json.dumps(cap_per_mach_CL),
+        sph_mn_CD=json.dumps(sph_mn_CD), sph_mn_CL=json.dumps(sph_mn_CL),
+        sph_mnm_CD=json.dumps(sph_mnm_CD), sph_mnm_CL=json.dumps(sph_mnm_CL),
+        sph_mnm_mach_CD=json.dumps(sph_mnm_mach_CD),
+        mesh_mn_n=json.dumps(mesh_mn_n), mesh_mn_eCD=json.dumps(mesh_mn_eCD),
+        mesh_mn_eCL=json.dumps(mesh_mn_eCL), mesh_mn_eCM=json.dumps(mesh_mn_eCM),
+        mesh_mnm_n=json.dumps(mesh_mnm_n), mesh_mnm_eCD=json.dumps(mesh_mnm_eCD),
+        mesh_mnm_eCL=json.dumps(mesh_mnm_eCL), mesh_mnm_eCM=json.dumps(mesh_mnm_eCM),
     )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"\n  OK report_3d.html -> {out_path}")
+
+    # ── Guardar PNGs estáticos ───────────────────────────────────────────────
+    _plots_dir = RESULTS_DIR / "Plots"
+    _png_data = dict(
+        cap_a=_cap_a, sph_a=_sph_a, cap_m=_cap_m,
+        mach_pts=mach_pts, cpmax_pts=cpmax_pts, cd_mnm_pts=cd_mnm_pts,
+        cap_mn_CD=cap_mn_CD, cap_mn_CL=cap_mn_CL, cap_mn_CM=cap_mn_CM,
+        cap_mnm_CD=cap_mnm_CD, cap_mnm_CL=cap_mnm_CL, cap_mnm_CM=cap_mnm_CM,
+        cap_mnm_LD=cap_mnm_LD, cap_mn_LD=cap_mn_LD,
+        cap_mnm_mach_CD=cap_mnm_mach_CD, cap_mnm_mach_CL=cap_mnm_mach_CL, cap_mnm_mach_CM=cap_mnm_mach_CM,
+        cap_per_mach_CD=cap_per_mach_CD, cap_per_mach_CL=cap_per_mach_CL,
+        sph_mn_CD=sph_mn_CD, sph_mn_CL=sph_mn_CL,
+        sph_mnm_CD=sph_mnm_CD, sph_mnm_CL=sph_mnm_CL,
+        sph_mnm_mach_CD=sph_mnm_mach_CD,
+        mesh_mn_n=mesh_mn_n, mesh_mn_eCD=mesh_mn_eCD, mesh_mn_eCL=mesh_mn_eCL, mesh_mn_eCM=mesh_mn_eCM,
+        mesh_mnm_n=mesh_mnm_n, mesh_mnm_eCD=mesh_mnm_eCD, mesh_mnm_eCL=mesh_mnm_eCL, mesh_mnm_eCM=mesh_mnm_eCM,
+        ms_mn_CD_raw=[r['CD'] for r in mesh_mn],
+        ms_mnm_CD_raw=[r['CD'] for r in mesh_mnm],
+    )
+    print("\nGuardando PNGs estáticos...")
+    try:
+        save_report_plots(_plots_dir, _png_data)
+    except ModuleNotFoundError as _e:
+        print(f"  [AVISO] matplotlib no disponible ({_e}). Ejecuta con el entorno TFG-min para generar PNGs.", file=sys.stderr)
+
     return out_path
 
 
@@ -510,6 +682,141 @@ def _build_checks(cases: list[dict]) -> list[dict]:
         {"id": "C6", "title": "Sensibilidad a malla",  "pass": bool(pass_c6),
          "desc": f"ΔCD={delta_c6:.4f} < 5%."},
     ]
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Generación de PNGs estáticos
+# ════════════════════════════════════════════════════════════════════════════
+
+def save_report_plots(plots_dir: Path, data: dict) -> None:
+    """Genera y guarda todos los gráficos como PNG usando matplotlib."""
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+
+    plots_dir = Path(plots_dir)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+
+    DARK = '#07090f'; GRID = '#1e2540'; TEXT = '#ccd6f6'; MUTED = '#4a5580'
+    C1 = '#3de8b0'; C2 = '#e85040'; C3 = '#7060e8'; C4 = '#e8a030'; C5 = '#e8d030'
+
+    def _fig(title, xlabel, ylabel, fname):
+        fig, ax = plt.subplots(figsize=(8, 5))
+        fig.patch.set_facecolor(DARK)
+        ax.set_facecolor('#0f1220')
+        ax.tick_params(colors=MUTED)
+        ax.xaxis.label.set_color(MUTED)
+        ax.yaxis.label.set_color(MUTED)
+        ax.title.set_color(TEXT)
+        for spine in ax.spines.values():
+            spine.set_edgecolor(GRID)
+        ax.grid(color=GRID, linewidth=0.7, linestyle='--', alpha=0.7)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        return fig, ax
+
+    def _save(fig, fname):
+        leg = plt.gca().get_legend()
+        if leg:
+            leg.get_frame().set_facecolor('#0f1220')
+            leg.get_frame().set_edgecolor(GRID)
+            for t in leg.get_texts(): t.set_color(TEXT)
+        plt.tight_layout()
+        plt.savefig(plots_dir / fname, dpi=150, bbox_inches='tight', facecolor=DARK)
+        plt.close()
+        print(f"  PNG -> {plots_dir / fname}")
+
+    cap_a = data['cap_a']; sph_a = data['sph_a']; cap_m = data['cap_m']
+    mach_pts = data['mach_pts']; cpmax_pts = data['cpmax_pts']; cd_mnm_pts = data['cd_mnm_pts']
+
+    # 1) Esfera — CD vs M∞
+    fig, ax = _fig('Esfera — CD vs M∞', 'M∞', 'CD', '')
+    ax.plot(mach_pts, cd_mnm_pts,  color=C2, lw=2,   marker='o', ms=5, label='CD_MNM (analítico)')
+    sph_mach = data.get('sph_mnm_mach_CD') or []
+    if sph_mach:
+        ax.plot(cap_m, sph_mach, color=C4, lw=2, marker='s', ms=5, linestyle='--', label='CD_MNM (numérico M∞ sweep)')
+    ax.axhline(1.0, color=C1, lw=1.5, linestyle=':', label='CD Newton = 1.0')
+    ax.legend(); _save(fig, '01_esfera_CD_vs_Mach.png')
+
+    # 2) Esfera — CD vs α
+    fig, ax = _fig('Esfera — CD vs α  (M=8)', 'α (°)', 'CD', '')
+    if data['sph_mn_CD']: ax.plot(sph_a, data['sph_mn_CD'],  color=C1, lw=2, marker='o', ms=6, label='MN')
+    if data['sph_mnm_CD']: ax.plot(sph_a, data['sph_mnm_CD'], color=C2, lw=2, marker='s', ms=6, label='MNM')
+    ax.legend(); _save(fig, '02_esfera_CD_vs_alpha_M8.png')
+
+    # 3) Esfera — CL vs α (validación simetría)
+    fig, ax = _fig('Esfera — CL vs α  (M=8) — Validación simetría', 'α (°)', 'CL', '')
+    if data['sph_mn_CL']: ax.plot(sph_a, data['sph_mn_CL'],  color=C1, lw=2, marker='o', ms=6, label='MN')
+    if data['sph_mnm_CL']: ax.plot(sph_a, data['sph_mnm_CL'], color=C2, lw=2, marker='s', ms=6, label='MNM')
+    ax.axhline(0, color=MUTED, lw=1, linestyle=':')
+    ax.legend(); _save(fig, '03_esfera_CL_vs_alpha_M8.png')
+
+    # 4) cp,max vs M∞
+    fig, ax = _fig('cp,max y CD_MNM vs M∞ (analítico)', 'M∞', '', '')
+    ax.plot(mach_pts, cpmax_pts,  color=C3, lw=2, marker='o', ms=5, label='cp,max')
+    ax.plot(mach_pts, cd_mnm_pts, color=C2, lw=2, marker='s', ms=5, label='CD_MNM = cp,max/2')
+    ax.legend(); _save(fig, '04_cpmax_CD_MNM_vs_Mach.png')
+
+    # 5) Cápsula — CD vs α
+    fig, ax = _fig('Cápsula ARD — CD vs α  (M=8)', 'α (°)', 'CD', '')
+    if data['cap_mn_CD']:  ax.plot(cap_a, data['cap_mn_CD'],  color=C1, lw=2, marker='o', ms=6, label='MN')
+    if data['cap_mnm_CD']: ax.plot(cap_a, data['cap_mnm_CD'], color=C2, lw=2, marker='s', ms=6, label='MNM')
+    ax.legend(); _save(fig, '05_capsula_CD_vs_alpha_M8.png')
+
+    # 6) Cápsula — CL vs α
+    fig, ax = _fig('Cápsula ARD — CL vs α  (M=8)', 'α (°)', 'CL', '')
+    if data['cap_mn_CL']:  ax.plot(cap_a, data['cap_mn_CL'],  color=C1, lw=2, marker='o', ms=6, label='MN')
+    if data['cap_mnm_CL']: ax.plot(cap_a, data['cap_mnm_CL'], color=C2, lw=2, marker='s', ms=6, label='MNM')
+    ax.legend(); _save(fig, '06_capsula_CL_vs_alpha_M8.png')
+
+    # 7) Cápsula — CM vs α
+    fig, ax = _fig('Cápsula ARD — CM vs α  (M=8)', 'α (°)', 'CM', '')
+    if data['cap_mn_CM']:  ax.plot(cap_a, data['cap_mn_CM'],  color=C1, lw=2, marker='o', ms=6, label='MN')
+    if data['cap_mnm_CM']: ax.plot(cap_a, data['cap_mnm_CM'], color=C2, lw=2, marker='s', ms=6, label='MNM')
+    ax.legend(); _save(fig, '07_capsula_CM_vs_alpha_M8.png')
+
+    # 8) Cápsula — L/D vs α
+    fig, ax = _fig('Cápsula ARD — L/D vs α  (M=8)', 'α (°)', 'L/D = CL/CD', '')
+    if data['cap_mn_LD']:  ax.plot(cap_a, data['cap_mn_LD'],  color=C1, lw=2, marker='o', ms=6, label='MN')
+    if data['cap_mnm_LD']: ax.plot(cap_a, data['cap_mnm_LD'], color=C2, lw=2, marker='s', ms=6, label='MNM')
+    ax.legend(); _save(fig, '08_capsula_LD_vs_alpha_M8.png')
+
+    # 9) Cápsula — CD vs Mach (MNM, α=0)
+    fig, ax = _fig('Cápsula ARD — CD vs M∞  (MNM, α=0°)', 'M∞', 'CD', '')
+    if data['cap_mnm_mach_CD']: ax.plot(cap_m, data['cap_mnm_mach_CD'], color=C2, lw=2, marker='s', ms=6, label='MNM α=0°')
+    ax.legend(); _save(fig, '09_capsula_CD_vs_Mach_alpha0.png')
+
+    # 10) Cápsula — CD vs alpha por Mach
+    pmCD = data.get('cap_per_mach_CD', {})
+    if pmCD:
+        fig, ax = _fig('Cápsula ARD — CD vs α por Mach  (MNM)', 'α (°)', 'CD', '')
+        colors_m = [C1, '#5be8d0', C4, C2, C3, C5]
+        for i, mk in enumerate(sorted(pmCD.keys(), key=int)):
+            vals = pmCD[mk]
+            if any(v is not None for v in vals):
+                ax.plot(cap_a, vals, color=colors_m[i % len(colors_m)], lw=2, marker='o', ms=5, label=f'M={mk}')
+        ax.legend(fontsize=8); _save(fig, '10_capsula_CD_vs_alpha_multiMach_MNM.png')
+
+    # 11) Sensibilidad malla — CD
+    mn_n = data['mesh_mn_n']; mnm_n = data['mesh_mnm_n']
+    mn_CD_vals = data.get('ms_mn_CD_raw', []); mnm_CD_vals = data.get('ms_mnm_CD_raw', [])
+    if mn_n or mnm_n:
+        fig, ax = _fig('Sensibilidad de Malla — CD  (α=10°, M=8)', 'N° triángulos', 'CD', '')
+        if mn_n:  ax.semilogx(mn_n,  mn_CD_vals,  color=C1, lw=2, marker='o', ms=7, label='MN')
+        if mnm_n: ax.semilogx(mnm_n, mnm_CD_vals, color=C2, lw=2, marker='s', ms=7, label='MNM')
+        ax.legend(); _save(fig, '11_sensibilidad_malla_CD.png')
+
+    # 12) Sensibilidad malla — Error relativo
+    mn_eCD = data['mesh_mn_eCD']; mnm_eCD = data['mesh_mnm_eCD']
+    if mn_n or mnm_n:
+        fig, ax = _fig('Error relativo CD vs malla fina  (α=10°, M=8)', 'N° triángulos', 'Error CD (%)', '')
+        if mn_n:  ax.semilogx(mn_n,  mn_eCD,  color=C1, lw=2, marker='o', ms=7, label='MN  ΔCD%')
+        if mnm_n: ax.semilogx(mnm_n, mnm_eCD, color=C2, lw=2, marker='s', ms=7, label='MNM ΔCD%')
+        if data['mesh_mn_eCL']: ax.semilogx(mn_n, data['mesh_mn_eCL'], color=C1, lw=1.5, marker='^', ms=5, linestyle='--', label='MN  ΔCL%')
+        if data['mesh_mnm_eCL']: ax.semilogx(mnm_n, data['mesh_mnm_eCL'], color=C2, lw=1.5, marker='^', ms=5, linestyle='--', label='MNM ΔCL%')
+        ax.legend(fontsize=8); _save(fig, '12_sensibilidad_malla_error_relativo.png')
+
+    print(f"  {len(list(plots_dir.glob('*.png')))} PNGs guardados en {plots_dir}")
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -805,30 +1112,71 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
 <!-- ═══════════════════ TAB: 3D ESFERA ═══════════════════ -->
 <div class="section" id="tab-sphere">
   <div class="shead"><span class="snum">02</span><h2>Visualización 3D — Esfera</h2><div class="sline"></div></div>
-  <div class="viewer-wrap">
-    <div class="plot3d" id="plot-sphere"></div>
-    <div class="info-panel">
-      <h3>Geometría de validación</h3>
-      <div class="info-sub">Esfera isotrópica · sin Cp externo</div>
-      <div class="kv"><div class="k">TRIÁNGULOS</div>
-        <div class="v">{d['n_tri_sph']}</div></div>
-      <div class="kv"><div class="k">S_ref (π R²)</div>
-        <div class="v">{d['sp_sref']:.6f} m²</div></div>
-      <div class="kv"><div class="k">L_ref (2R)</div>
-        <div class="v">{d['sp_lref']:.4f} m</div></div>
-      <div class="divider"></div>
-      <div class="kv"><div class="k">CD · MN · M8</div>
-        <div class="v cd" id="sph-cd-mn">—</div></div>
-      <div class="kv"><div class="k">CD · MNM · M2</div>
-        <div class="v cl" id="sph-cd-m2">—</div></div>
-      <div class="kv"><div class="k">CD · MNM · M8</div>
-        <div class="v cm" id="sph-cd-m8">—</div></div>
-      <div class="tip">
-        La esfera se usa para validación del método MN.<br>
-        CD_Newton teórico = 1.0 para M→∞.<br><br>
-        La geometría se colorea por distancia al centro geométrico.
-      </div>
+
+  <!-- Selector bar -->
+  <div class="sel-bar">
+    <div class="sel-group">
+      <span class="sel-label">MÉTODO</span>
+      <select id="sph-sel-model" onchange="updateSphere()">
+        <option value="MNM">MNM — Newton Modificado</option>
+        <option value="MN">MN — Newton</option>
+      </select>
     </div>
+    <div class="sel-group">
+      <span class="sel-label">ÁNGULO α (°)</span>
+      <select id="sph-sel-alpha" onchange="updateSphere()"></select>
+    </div>
+    <div class="sel-group">
+      <span class="sel-label">MACH M∞</span>
+      <select id="sph-sel-mach" onchange="updateSphere()"></select>
+    </div>
+  </div>
+
+  <!-- 3D plot full-width -->
+  <div class="plot3d" id="plot-sphere" style="height:560px;border-radius:10px"></div>
+
+  <!-- Métricas dinámicas -->
+  <div class="metrics-row">
+    <div class="metric-pill mpcd">
+      <div class="mp-label">CD</div>
+      <div class="mp-val" id="sph-mp-cd">—</div>
+    </div>
+    <div class="metric-pill mpcl">
+      <div class="mp-label">CL</div>
+      <div class="mp-val" id="sph-mp-cl">—</div>
+    </div>
+    <div class="metric-pill mpcm">
+      <div class="mp-label">CM</div>
+      <div class="mp-val" id="sph-mp-cm">—</div>
+    </div>
+    <div class="metric-pill mpn">
+      <div class="mp-label">TRIÁNGULOS</div>
+      <div class="mp-val" style="color:var(--accent4);font-size:1.1rem">{d['n_tri_sph']}</div>
+    </div>
+    <div class="metric-pill" style="border-color:var(--muted)">
+      <div class="mp-label">S_ref (πR²)</div>
+      <div class="mp-val" style="color:var(--text);font-size:1rem">{d['sp_sref']:.6f} m²</div>
+    </div>
+    <div class="metric-pill" style="border-color:var(--muted)">
+      <div class="mp-label">L_ref (2R)</div>
+      <div class="mp-val" style="color:var(--text);font-size:1rem">{d['sp_lref']:.4f} m</div>
+    </div>
+  </div>
+
+  <!-- compat ids -->
+  <span id="sph-cd-mn" style="display:none"></span>
+  <span id="sph-cd-m2" style="display:none"></span>
+  <span id="sph-cd-m8" style="display:none"></span>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-top:12px;
+    font-family:'Space Mono',monospace;font-size:8.5px;color:var(--muted)">
+    <div style="width:80px;height:8px;border-radius:2px;
+      background:linear-gradient(90deg,#440154,#21908c,#fde725)"></div>
+    <span>Cp — Viridis: mínimo → máximo · CD_Newton teórico = 1.0 para M→∞</span>
+  </div>
+  <div class="tip" style="margin-top:10px">
+    🖱 Arrastra para rotar &nbsp;·&nbsp; 🔍 Scroll para zoom &nbsp;·&nbsp;
+    ⇧ Shift+drag para mover &nbsp;·&nbsp; 🖱🖱 Doble click para centrar
   </div>
 </div>
 
@@ -837,17 +1185,26 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
 <div class="section" id="tab-mesh">
   <div class="shead"><span class="snum">03</span><h2>Sensibilidad de Malla</h2><div class="sline"></div></div>
 
-  <!-- Convergencia -->
   <div class="charts-grid" style="margin-bottom:20px">
     <div class="chart-box">
       <h3>Convergencia CD — MN vs MNM</h3>
-      <div class="chart-sub">CD vs N° triángulos · α={d['mesh_alpha_label']} · M=8</div>
+      <div class="chart-sub">CD vs N° triángulos · α={d['mesh_alpha_label']} · M=8 · escala log</div>
       <div class="plotly-chart" id="mesh-ch-cd"></div>
     </div>
     <div class="chart-box">
-      <h3>Convergencia CL y CM — MN vs MNM</h3>
-      <div class="chart-sub">CL / CM vs N° triángulos · α={d['mesh_alpha_label']} · M=8</div>
+      <h3>Convergencia CL — MN vs MNM</h3>
+      <div class="chart-sub">CL vs N° triángulos · α={d['mesh_alpha_label']} · M=8</div>
       <div class="plotly-chart" id="mesh-ch-cl"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Error relativo CD vs malla fina</h3>
+      <div class="chart-sub">Referencia = ARD2 (400k caras) · MN y MNM</div>
+      <div class="plotly-chart" id="mesh-ch-err-cd"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Error relativo CL y CM vs malla fina</h3>
+      <div class="chart-sub">Referencia = ARD2 (400k caras) · MN y MNM</div>
+      <div class="plotly-chart" id="mesh-ch-err-cl"></div>
     </div>
   </div>
 
@@ -876,32 +1233,75 @@ footer{{margin-top:64px;padding-top:18px;border-top:1px solid var(--border);
 <!-- ═══════════════════ TAB: GRÁFICAS ═══════════════════ -->
 <div class="section" id="tab-charts">
   <div class="shead"><span class="snum">04</span><h2>Análisis Gráfico Interactivo</h2><div class="sline"></div></div>
-  <div class="charts-grid">
 
+  <!-- ── Esfera ── -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+    <span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--accent4);
+      border:1px solid var(--accent4);padding:3px 9px;border-radius:2px;letter-spacing:.1em">ESFERA</span>
+    <h3 style="font-size:.95rem;font-weight:600;color:var(--text)">Validación</h3>
+    <div style="flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)"></div>
+  </div>
+  <div class="charts-grid" style="margin-bottom:28px">
     <div class="chart-box">
-      <h3>Validación Esfera — CD vs M∞</h3>
-      <div class="chart-sub">MNM analítico · CD Newton = 1.0 (referencia)</div>
+      <h3>Esfera — CD vs M∞</h3>
+      <div class="chart-sub">MNM analítico · numérico · CD Newton = 1.0</div>
       <div class="plotly-chart" id="ch-sphere-cd"></div>
     </div>
-
+    <div class="chart-box">
+      <h3>Esfera — CD vs α  (M=8)</h3>
+      <div class="chart-sub">MN vs MNM · la esfera es simétrica</div>
+      <div class="plotly-chart" id="ch-sph-cd-alpha"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Esfera — CL vs α  (M=8)</h3>
+      <div class="chart-sub">Validación simetría · debe ser ≈ 0</div>
+      <div class="plotly-chart" id="ch-sph-cl-alpha"></div>
+    </div>
     <div class="chart-box">
       <h3>cp,max y CD_MNM vs M∞</h3>
-      <div class="chart-sub">cp,max / CD = cp,max/2 (analítico)</div>
+      <div class="chart-sub">cp,max analítico · CD_MNM = cp,max/2</div>
       <div class="plotly-chart" id="ch-cpmax"></div>
     </div>
+  </div>
 
+  <!-- ── Cápsula ── -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+    <span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--accent2);
+      border:1px solid var(--accent2);padding:3px 9px;border-radius:2px;letter-spacing:.1em">CÁPSULA</span>
+    <h3 style="font-size:.95rem;font-weight:600;color:var(--text)">Resultados ARD · PruebaARD3 · M=8</h3>
+    <div style="flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)"></div>
+  </div>
+  <div class="charts-grid" style="margin-bottom:28px">
     <div class="chart-box">
       <h3>Cápsula — CD vs α</h3>
       <div class="chart-sub">MN vs MNM · M∞ = 8 · ejes viento</div>
       <div class="plotly-chart" id="ch-cap-cd"></div>
     </div>
-
     <div class="chart-box">
-      <h3>Cápsula — CL y CM vs α</h3>
-      <div class="chart-sub">MNM · M∞ = 8</div>
+      <h3>Cápsula — CL vs α</h3>
+      <div class="chart-sub">MN vs MNM · M∞ = 8</div>
       <div class="plotly-chart" id="ch-cap-cl"></div>
     </div>
-
+    <div class="chart-box">
+      <h3>Cápsula — CM vs α</h3>
+      <div class="chart-sub">MN vs MNM · momento de cabeceo · M∞ = 8</div>
+      <div class="plotly-chart" id="ch-cap-cm"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Cápsula — L/D vs α</h3>
+      <div class="chart-sub">Eficiencia aerodinámica · MN vs MNM · M∞ = 8</div>
+      <div class="plotly-chart" id="ch-cap-ld"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Cápsula — CD vs M∞  (α=0°)</h3>
+      <div class="chart-sub">MNM · sensibilidad al número de Mach</div>
+      <div class="plotly-chart" id="ch-cap-cd-mach"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Cápsula — CD vs α por Mach  (MNM)</h3>
+      <div class="chart-sub">Cada curva = un M∞ distinto</div>
+      <div class="plotly-chart" id="ch-cap-cd-alphas-mach"></div>
+    </div>
   </div>
 </div>
 
@@ -981,16 +1381,24 @@ const MACH_X={d['mach_sweep_x']}, MACH_CD={d['mach_sweep_cd']};
 const CASES={d['js_cases']};
 const CHECKS={d['checks_data']};
 
-// ── Base de datos interactiva ─────────────────────────────────────────────────
+// ── Base de datos interactiva (cápsula) ──────────────────────────────────────
 const GEOM_DB={d['geom_db_js']};
 const CP_DB={d['cp_db_js']};
 const IMESH_NAMES={d['interactive_mesh_names']};
 const IALPHAS={d['interactive_alphas']};
 const IMACHS={d['interactive_machs']};
 
+// ── Base de datos interactiva (esfera) ───────────────────────────────────────
+const SPH_GEOM_DB={d['sph_geom_db_js']};
+const SPH_CP_DB={d['sph_cp_db_js']};
+const SPH_ALPHAS={d['interactive_sphere_alphas']};
+const SPH_MACHS={d['interactive_sphere_machs']};
+
 // ── Malla ────────────────────────────────────────────────────────────────────
 const MS_MN_N={d['ms_mn_n']},  MS_MN_CD={d['ms_mn_CD']},  MS_MN_CL={d['ms_mn_CL']},  MS_MN_CM={d['ms_mn_CM']},  MS_MN_LBL={d['ms_mn_lbl']};
 const MS_MNM_N={d['ms_mnm_n']},MS_MNM_CD={d['ms_mnm_CD']},MS_MNM_CL={d['ms_mnm_CL']},MS_MNM_CM={d['ms_mnm_CM']},MS_MNM_LBL={d['ms_mnm_lbl']};
+const MESH_MN_N={d['mesh_mn_n']}, MESH_MN_ECD={d['mesh_mn_eCD']}, MESH_MN_ECL={d['mesh_mn_eCL']}, MESH_MN_ECM={d['mesh_mn_eCM']};
+const MESH_MNM_N={d['mesh_mnm_n']}, MESH_MNM_ECD={d['mesh_mnm_eCD']}, MESH_MNM_ECL={d['mesh_mnm_eCL']}, MESH_MNM_ECM={d['mesh_mnm_eCM']};
 const CO_X={d['cox']},CO_Y={d['coy']},CO_Z={d['coz']},CO_I={d['coi']},CO_J={d['coj']},CO_K={d['cok']};
 
 // ── Plotly layout helpers ───────────────────────────────────────────────────
@@ -1137,35 +1545,75 @@ function updateCapsule() {{
 
 // ── 3D Esfera ───────────────────────────────────────────────────────────────
 function renderSphere() {{
-  // Colorear por distancia al centroide (sin Cp disponible)
-  const cx = SPH_X.reduce((a,b)=>a+b,0)/SPH_X.length;
-  const cy = SPH_Y.reduce((a,b)=>a+b,0)/SPH_Y.length;
-  const cz = SPH_Z.reduce((a,b)=>a+b,0)/SPH_Z.length;
-  const intensity = SPH_Z.map((z,i) => SPH_X[i]-cx);  // lateral position
+  const alphaSel = document.getElementById('sph-sel-alpha');
+  const machSel  = document.getElementById('sph-sel-mach');
+
+  if (alphaSel.options.length === 0) {{
+    SPH_ALPHAS.forEach(a => {{
+      const o = document.createElement('option');
+      o.value = a; o.textContent = a + '°';
+      if (a === 0) o.selected = true;
+      alphaSel.appendChild(o);
+    }});
+    SPH_MACHS.forEach(m => {{
+      const o = document.createElement('option');
+      o.value = m; o.textContent = 'M ' + m;
+      if (m === 8) o.selected = true;
+      machSel.appendChild(o);
+    }});
+  }}
+  updateSphere();
+}}
+
+function updateSphere() {{
+  const model = document.getElementById('sph-sel-model').value;
+  const alpha = document.getElementById('sph-sel-alpha').value;
+  const mach  = document.getElementById('sph-sel-mach').value;
+
+  document.getElementById('sph-sel-mach').disabled = (model === 'MN');
+
+  const g = SPH_GEOM_DB['sphere'];
+  if (!g) return;
+
+  const mk    = (model === 'MN') ? '8' : String(mach);
+  const entry = SPH_CP_DB?.['sphere']?.[model]?.[String(alpha)]?.[mk];
 
   const trace = {{
     type: 'mesh3d',
-    x: SPH_X, y: SPH_Y, z: SPH_Z,
-    i: SPH_I, j: SPH_J, k: SPH_K,
-    intensity: intensity,
-    colorscale: [['0','#3de8b0'],['0.5','#7060e8'],['1','#e85040']],
-    showscale: false,
+    x: g.x, y: g.y, z: g.z,
+    i: g.i, j: g.j, k: g.k,
+    intensity: entry ? entry.cp : null,
+    colorscale: 'Viridis', showscale: true,
+    colorbar: {{
+      title: {{text:'Cp', side:'right', font:{{size:9,color:MUTED}}}},
+      thickness:14, len:0.7,
+      tickfont:{{size:9,color:MUTED}},
+      outlinecolor:GRID, bgcolor:BG,
+    }},
     flatshading: false,
-    lighting: {{ambient:0.45, diffuse:0.75, specular:0.4, roughness:0.4}},
+    lighting: {{ambient:0.5,diffuse:0.7,specular:0.3,roughness:0.5}},
     lightposition: {{x:500,y:-1000,z:1500}},
-    opacity: 0.92,
-    hovertemplate: 'x:%{{x:.2f}}<br>y:%{{y:.2f}}<br>z:%{{z:.2f}}<extra></extra>',
+    hovertemplate:'x:%{{x:.2f}}<br>y:%{{y:.2f}}<br>z:%{{z:.2f}}<br>Cp:%{{intensity:.4f}}<extra></extra>',
   }};
 
-  const layout = LAYOUT_3D('Esfera — geometría de validación');
+  const layout = LAYOUT_3D(`Esfera — ${{model}} · α=${{alpha}}° · M=${{mach}}`);
   layout.scene.camera = {{eye:{{x:1.8,y:-1.8,z:0.8}}}};
-  Plotly.newPlot('plot-sphere', [trace], layout, CFG);
 
-  const m = id => CASES.find(x => x.id === id);
-  const r1 = m('sphere_MN_a0_M8'), r2 = m('sphere_MNM_a0_M2'), r3 = m('sphere_MNM_a0_M8');
-  if (r1) document.getElementById('sph-cd-mn').textContent = r1.CD.toFixed(5);
-  if (r2) document.getElementById('sph-cd-m2').textContent = r2.CD.toFixed(5);
-  if (r3) document.getElementById('sph-cd-m8').textContent = r3.CD.toFixed(5);
+  if (document.getElementById('plot-sphere').data) {{
+    Plotly.react('plot-sphere', [trace], layout, CFG);
+  }} else {{
+    Plotly.newPlot('plot-sphere', [trace], layout, CFG);
+  }}
+
+  if (entry) {{
+    document.getElementById('sph-mp-cd').textContent = entry.CD.toFixed(5);
+    document.getElementById('sph-mp-cl').textContent = entry.CL.toFixed(5);
+    document.getElementById('sph-mp-cm').textContent = entry.CM.toFixed(5);
+  }} else {{
+    document.getElementById('sph-mp-cd').textContent = '—';
+    document.getElementById('sph-mp-cl').textContent = '—';
+    document.getElementById('sph-mp-cm').textContent = '—';
+  }}
 }}
 
 // ── Sensibilidad de malla ────────────────────────────────────────────────────
@@ -1198,6 +1646,34 @@ function renderMesh() {{
     xaxis:{{...LAYOUT_2D().xaxis, type:'log', title:{{text:'N° triángulos (log)',font:{{size:9,color:MUTED}}}}}},
   }}, CFG);
 
+  // Error relativo CD
+  Plotly.newPlot('mesh-ch-err-cd', [
+    {{name:'ΔCD% MN',  x:MESH_MN_N,  y:MESH_MN_ECD,  mode:'lines+markers',
+      text:MS_MN_LBL, hovertemplate:'%{{text}}<br>ΔCD=%{{y:.2f}}%<extra></extra>',
+      line:{{color:'#3de8b0',width:2.5}}, marker:{{size:8}}}},
+    {{name:'ΔCD% MNM', x:MESH_MNM_N, y:MESH_MNM_ECD, mode:'lines+markers',
+      text:MS_MNM_LBL,hovertemplate:'%{{text}}<br>ΔCD=%{{y:.2f}}%<extra></extra>',
+      line:{{color:'#e85040',width:2.5}}, marker:{{size:8,symbol:'diamond'}}}},
+  ], {{
+    ...LAYOUT_2D('N° triángulos','ΔCD (%)'),
+    xaxis:{{...LAYOUT_2D().xaxis, type:'log', title:{{text:'N° triángulos (log)',font:{{size:9,color:MUTED}}}}}},
+  }}, CFG);
+
+  // Error relativo CL y CM
+  Plotly.newPlot('mesh-ch-err-cl', [
+    {{name:'ΔCL% MN',  x:MESH_MN_N,  y:MESH_MN_ECL,  mode:'lines+markers',
+      line:{{color:'#3de8b0',width:2.5,dash:'solid'}},  marker:{{size:8}}}},
+    {{name:'ΔCL% MNM', x:MESH_MNM_N, y:MESH_MNM_ECL, mode:'lines+markers',
+      line:{{color:'#e85040',width:2.5,dash:'solid'}},  marker:{{size:8,symbol:'diamond'}}}},
+    {{name:'ΔCM% MN',  x:MESH_MN_N,  y:MESH_MN_ECM,  mode:'lines+markers',
+      line:{{color:'#3de8b088',width:2,dash:'dot'}},    marker:{{size:6}}}},
+    {{name:'ΔCM% MNM', x:MESH_MNM_N, y:MESH_MNM_ECM, mode:'lines+markers',
+      line:{{color:'#e8504088',width:2,dash:'dot'}},    marker:{{size:6,symbol:'diamond'}}}},
+  ], {{
+    ...LAYOUT_2D('N° triángulos','Error (%)'),
+    xaxis:{{...LAYOUT_2D().xaxis, type:'log', title:{{text:'N° triángulos (log)',font:{{size:9,color:MUTED}}}}}},
+  }}, CFG);
+
   // 3D coarse
   const meshTrace = (x,y,z,i,j,k,col,title) => [{{
     type:'mesh3d', x,y,z,i,j,k,
@@ -1220,43 +1696,89 @@ function renderMesh() {{
     sceneLayout('Malla media — PruebaARD3.stl'), CFG);
 }}
 
-// ── Charts ──────────────────────────────────────────────────────────────────
+// ── Charts ──────────────────────────────────────────────────────────────
+const CAP_A={d['cap_a']}, CAP_M={d['cap_m']}, SPH_A={d['sph_a']};
+const CAP_MN_CD={d['cap_mn_CD']},  CAP_MN_CL={d['cap_mn_CL']},  CAP_MN_CM={d['cap_mn_CM']};
+const CAP_MNM_CD={d['cap_mnm_CD']}, CAP_MNM_CL={d['cap_mnm_CL']}, CAP_MNM_CM={d['cap_mnm_CM']};
+const CAP_MNM_LD={d['cap_mnm_LD']}, CAP_MN_LD={d['cap_mn_LD']};
+const CAP_MACH_CD={d['cap_mnm_mach_CD']}, CAP_MACH_CL={d['cap_mnm_mach_CL']}, CAP_MACH_CM={d['cap_mnm_mach_CM']};
+const CAP_PER_MACH_CD={d['cap_per_mach_CD']}, CAP_PER_MACH_CL={d['cap_per_mach_CL']};
+const SPH_MN_CD={d['sph_mn_CD']},   SPH_MN_CL={d['sph_mn_CL']};
+const SPH_MNM_CD={d['sph_mnm_CD']},  SPH_MNM_CL={d['sph_mnm_CL']};
+const SPH_MACH_CD={d['sph_mnm_mach_CD']};
+
 function renderCharts() {{
+  const mk = (x,y,col,name,dash='solid',sym='circle') => ({{
+    name, x, y, mode:'lines+markers',
+    line:{{color:col,width:2.5,dash}},
+    marker:{{size:7,symbol:sym,color:col}},
+    connectgaps:true,
+  }});
+
   // 1) Esfera CD vs Mach
   Plotly.newPlot('ch-sphere-cd', [
-    {{name:'CD (MNM analítico)', x:MACH_PTS, y:CD_MNM, mode:'lines+markers',
-      line:{{color:'#e85040',width:2}}, marker:{{size:6,color:'#e85040'}}}},
-    {{name:'Barrido Mach (MNM)', x:MACH_X, y:MACH_CD, mode:'lines+markers',
-      line:{{color:'#e8a030',width:2,dash:'dot'}}, marker:{{size:6,color:'#e8a030'}}}},
-    {{name:'CD Newton = 1.0', x:MACH_PTS, y:MACH_PTS.map(()=>1), mode:'lines',
-      line:{{color:'#3de8b0',width:1.5,dash:'dash'}}}},
-  ], {{...LAYOUT_2D('M∞','CD'), yaxis:{{...LAYOUT_2D().yaxis,range:[0.4,1.2]}}}}, CFG);
+    mk(MACH_PTS, CD_MNM,     '#e85040', 'CD_MNM (analítico)'),
+    mk(SPH_MACH_CD ? CAP_M : [], SPH_MACH_CD||[], '#e8a030', 'CD_MNM (numérico)', 'dot', 'square'),
+    {{name:'CD Newton=1.0', x:MACH_PTS, y:MACH_PTS.map(()=>1), mode:'lines', line:{{color:'#3de8b0',width:1.5,dash:'dash'}}}},
+  ], {{...LAYOUT_2D('M∞','CD'), yaxis:{{...LAYOUT_2D().yaxis,range:[0.4,1.1]}}}}, CFG);
 
-  // 2) cp,max vs Mach
-  Plotly.newPlot('ch-cpmax', [
-    {{name:'cp,max (analítico)', x:MACH_PTS, y:CPMAX, mode:'lines+markers',
-      line:{{color:'#7060e8',width:2}}, marker:{{size:6}}, fill:'tozeroy', fillcolor:'#7060e810'}},
-    {{name:'CD_MNM = cp,max/2', x:MACH_PTS, y:CD_MNM, mode:'lines+markers',
-      line:{{color:'#e85040',width:2}}, marker:{{size:6}}}},
-    {{name:'cp,max/2 (line)', x:MACH_PTS, y:CPMAX.map(v=>v/2), mode:'lines',
-      line:{{color:'#3de8b0',width:1.5,dash:'dot'}}}},
-  ], LAYOUT_2D('M∞',''), CFG);
-
-  // 3) Cápsula CD vs alpha
-  Plotly.newPlot('ch-cap-cd', [
-    {{name:'MNM', x:MNM_A, y:MNM_CD, mode:'lines+markers',
-      line:{{color:'#e85040',width:2.5}}, marker:{{size:7}}}},
-    {{name:'MN',  x:MN_A,  y:MN_CD,  mode:'lines+markers',
-      line:{{color:'#3de8b0',width:2.5}}, marker:{{size:7}}}},
+  // 2) Esfera CD vs alpha
+  Plotly.newPlot('ch-sph-cd-alpha', [
+    mk(SPH_A, SPH_MN_CD,  '#3de8b0', 'MN'),
+    mk(SPH_A, SPH_MNM_CD, '#e85040', 'MNM', 'dot', 'square'),
   ], LAYOUT_2D('α (°)','CD'), CFG);
 
-  // 4) Cápsula CL & CM vs alpha
+  // 3) Esfera CL vs alpha
+  Plotly.newPlot('ch-sph-cl-alpha', [
+    mk(SPH_A, SPH_MN_CL,  '#3de8b0', 'MN'),
+    mk(SPH_A, SPH_MNM_CL, '#e85040', 'MNM', 'dot', 'square'),
+    {{name:'CL = 0 (ref)', x:SPH_A, y:SPH_A.map(()=>0), mode:'lines', line:{{color:'#4a5580',width:1,dash:'dot'}}}},
+  ], LAYOUT_2D('α (°)','CL'), CFG);
+
+  // 4) cp,max vs Mach
+  Plotly.newPlot('ch-cpmax', [
+    mk(MACH_PTS, CPMAX,    '#7060e8', 'cp,max'),
+    mk(MACH_PTS, CD_MNM,   '#e85040', 'CD_MNM = cp,max/2'),
+    mk(MACH_PTS, CPMAX.map(v=>v/2), '#3de8b0', 'cp,max/2', 'dot'),
+  ], LAYOUT_2D('M∞',''), CFG);
+
+  // 5) Cápsula CD vs alpha
+  Plotly.newPlot('ch-cap-cd', [
+    mk(CAP_A, CAP_MNM_CD, '#e85040', 'MNM'),
+    mk(CAP_A, CAP_MN_CD,  '#3de8b0', 'MN'),
+  ], LAYOUT_2D('α (°)','CD'), CFG);
+
+  // 6) Cápsula CL vs alpha
   Plotly.newPlot('ch-cap-cl', [
-    {{name:'CL (MNM)', x:MNM_A, y:MNM_CL, mode:'lines+markers',
-      line:{{color:'#3de8b0',width:2.5}}, marker:{{size:7}}}},
-    {{name:'CM (MNM)', x:MNM_A, y:MNM_CM, mode:'lines+markers',
-      line:{{color:'#7060e8',width:2.5}}, marker:{{size:7}}}},
-  ], LAYOUT_2D('α (°)',''), CFG);
+    mk(CAP_A, CAP_MNM_CL, '#e85040', 'MNM'),
+    mk(CAP_A, CAP_MN_CL,  '#3de8b0', 'MN'),
+  ], LAYOUT_2D('α (°)','CL'), CFG);
+
+  // 7) Cápsula CM vs alpha
+  Plotly.newPlot('ch-cap-cm', [
+    mk(CAP_A, CAP_MNM_CM, '#7060e8', 'MNM'),
+    mk(CAP_A, CAP_MN_CM,  '#3de8b088', 'MN', 'dot'),
+  ], LAYOUT_2D('α (°)','CM'), CFG);
+
+  // 8) Cápsula L/D vs alpha
+  Plotly.newPlot('ch-cap-ld', [
+    mk(CAP_A, CAP_MNM_LD, '#e85040', 'MNM  L/D'),
+    mk(CAP_A, CAP_MN_LD,  '#3de8b0', 'MN   L/D'),
+    {{name:'L/D=0', x:CAP_A, y:CAP_A.map(()=>0), mode:'lines', line:{{color:'#4a5580',width:1,dash:'dot'}}}},
+  ], LAYOUT_2D('α (°)','CL/CD'), CFG);
+
+  // 9) Cápsula CD vs Mach
+  Plotly.newPlot('ch-cap-cd-mach', [
+    mk(CAP_M, CAP_MACH_CD, '#e85040', 'MNM  CD  α=0°', 'solid', 'square'),
+  ], LAYOUT_2D('M∞','CD'), CFG);
+
+  // 10) Cápsula CD vs alpha por Mach
+  const mColors = ['#3de8b0','#5be8d0','#e8a030','#e85040','#7060e8','#e8d030'];
+  const mTraces = Object.entries(CAP_PER_MACH_CD).sort((a,b)=>+a[0]-+b[0]).map(([mk2,vals],i)=>
+    ({{ name:`M=${{mk2}}`, x:CAP_A, y:vals, mode:'lines+markers',
+       line:{{color:mColors[i%mColors.length],width:2}},
+       marker:{{size:6,color:mColors[i%mColors.length]}},connectgaps:true }}));
+  Plotly.newPlot('ch-cap-cd-alphas-mach', mTraces, LAYOUT_2D('α (°)','CD'), CFG);
 }}
 
 // ── Tabla de resultados ──────────────────────────────────────────────────────
