@@ -333,7 +333,7 @@ def generate_3d_html(
     results_json = results_json or RESULTS_DIR / "results.json"
     cp_csv       = cp_csv       or RESULTS_DIR / "csv" / "cp_faces_mnm_a20_M8.csv"
     stl_capsule  = stl_capsule  or DATA_DIR   / "Capsula" / "PruebaARD3.stl"
-    stl_sphere   = stl_sphere   or DATA_DIR   / "esfera.stl"
+    stl_sphere   = stl_sphere   or DATA_DIR   / "esfera" / "esfera.stl"
     stl_coarse   = stl_coarse   or DATA_DIR   / "Capsula" / "PruebaARD.stl"
     mesh_sens_csv = mesh_sens_csv or RESULTS_DIR / "results_mesh_sensitivity.csv"
     out_path     = out_path     or RESULTS_DIR / "report_3d.html"

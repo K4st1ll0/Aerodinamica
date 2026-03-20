@@ -277,7 +277,7 @@ def print_mesh_summary(mesh: trimesh.Trimesh) -> None:
 if __name__ == "__main__":
     # Ejemplo rápido de uso:
     # python src/stl_utils.py
-    stl_path = Path("data/esfera.stl")
+    stl_path = Path("data/esfera/esfera.stl")
 
     mesh = load_stl(stl_path)
     print_mesh_summary(mesh)

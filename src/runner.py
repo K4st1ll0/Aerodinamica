@@ -201,6 +201,284 @@ def save_cp_csv(filepath, centers, cp):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Plots analíticos
+# ══════════════════════════════════════════════════════════════════════════════
+
+_COLORS = {
+    "MN":      "#2196F3",
+    "MNM":     "#FF5722",
+    "coarse":  "#E91E63",
+    "fine":    "#4CAF50",
+    "medium":  "#FF9800",
+    "sphere":  "#00BCD4",
+    "capsule": "#9C27B0",
+}
+
+def _setup_ax(ax, xlabel="", ylabel="", title="", grid=True):
+    ax.set_xlabel(xlabel, fontsize=11)
+    ax.set_ylabel(ylabel, fontsize=11)
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    if grid:
+        ax.grid(True, alpha=0.3, linestyle="--")
+    ax.tick_params(labelsize=10)
+
+
+def generate_plots(
+    plots_dir,
+    rows_mn=None,
+    rows_mnm=None,
+    rows_mach=None,
+    rows_mesh=None,
+    rows_mn_coarse=None,
+    rows_mn_fine=None,
+    rows_mnm_coarse=None,
+    rows_mnm_fine=None,
+    sphere_mach_rows=None,
+    sphere_mn_cases=None,
+    coarse_label="ARD_coarsest",
+    fine_label="ARD_ultrafine",
+    mesh_sweeps_mn=None,
+    mesh_sweeps_mnm=None,
+    mesh_mach_sweeps_mnm=None,
+    mesh_tri_counts=None,
+):
+    """Genera todas las gráficas analíticas y las guarda en plots_dir."""
+    pd_dir   = Path(plots_dir)
+    mesh_dir = pd_dir / "AnalisisMallado"
+    pd_dir.mkdir(parents=True, exist_ok=True)
+    mesh_dir.mkdir(parents=True, exist_ok=True)
+
+    def _col(rows, key):
+        return [r[key] for r in rows] if rows else []
+
+    # ── 1. CD / CL / CM vs alpha — Cápsula (MN vs MNM) ─────────────────────
+    if rows_mn and rows_mnm:
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        fig.suptitle("Cápsula — Coeficientes vs α  (MN vs MNM)", fontsize=14, fontweight="bold")
+        pairs = [("CD", "CD"), ("CL", "CL"), ("CM", "CM")]
+        for ax, (key, label) in zip(axes, pairs):
+            a_mn  = _col(rows_mn,  "alpha_deg")
+            v_mn  = _col(rows_mn,  key)
+            a_mnm = _col(rows_mnm, "alpha_deg")
+            v_mnm = _col(rows_mnm, key)
+            ax.plot(a_mn,  v_mn,  "o-", color=_COLORS["MN"],  label="MN",  lw=2, ms=6)
+            ax.plot(a_mnm, v_mnm, "s-", color=_COLORS["MNM"], label="MNM", lw=2, ms=6)
+            _setup_ax(ax, "α (°)", label, f"{label} vs α")
+            ax.legend(fontsize=10)
+        plt.tight_layout()
+        fig.savefig(pd_dir / "capsule_coefficients_vs_alpha.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print("  ✓ capsule_coefficients_vs_alpha.png")
+
+    # ── 2. CD / CL / CM vs alpha — Cápsula (MN, por separado) ──────────────
+    if rows_mn:
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        fig.suptitle("Cápsula — Coeficientes vs α  (MN)", fontsize=14, fontweight="bold")
+        for ax, key in zip(axes, ["CD", "CL", "CM"]):
+            ax.plot(_col(rows_mn, "alpha_deg"), _col(rows_mn, key),
+                    "o-", color=_COLORS["MN"], lw=2.5, ms=7)
+            _setup_ax(ax, "α (°)", key, f"{key} vs α (MN)")
+        plt.tight_layout()
+        fig.savefig(pd_dir / "capsule_MN_vs_alpha.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print("  ✓ capsule_MN_vs_alpha.png")
+
+    # ── 3. CD / CL / CM vs alpha — Cápsula (MNM, por separado) ─────────────
+    if rows_mnm:
+        M_label = rows_mnm[0].get("Mach", "?") if rows_mnm else "?"
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        fig.suptitle(f"Cápsula — Coeficientes vs α  (MNM, M∞={M_label})", fontsize=14, fontweight="bold")
+        for ax, key in zip(axes, ["CD", "CL", "CM"]):
+            ax.plot(_col(rows_mnm, "alpha_deg"), _col(rows_mnm, key),
+                    "s-", color=_COLORS["MNM"], lw=2.5, ms=7)
+            _setup_ax(ax, "α (°)", key, f"{key} vs α (MNM)")
+        plt.tight_layout()
+        fig.savefig(pd_dir / "capsule_MNM_vs_alpha.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print("  ✓ capsule_MNM_vs_alpha.png")
+
+    # ── 4. CD / CL / CM y Cp_max vs Mach — Cápsula (MNM, α=0) ─────────────
+    if rows_mach:
+        fig, axes = plt.subplots(2, 2, figsize=(13, 9))
+        fig.suptitle("Cápsula — Coeficientes vs M∞  (MNM, α=0°)", fontsize=14, fontweight="bold")
+        M = _col(rows_mach, "Mach")
+        for ax, key, color in zip(
+            axes.flat[:3], ["CD", "CL", "CM"],
+            [_COLORS["MNM"], "#4CAF50", "#9C27B0"],
+        ):
+            ax.plot(M, _col(rows_mach, key), "D-", color=color, lw=2, ms=6)
+            _setup_ax(ax, "M∞", key, f"{key} vs M∞ (MNM)")
+        ax_cp = axes.flat[3]
+        ax_cp.plot(M, _col(rows_mach, "cp_max_stagnation"), "^-",
+                   color=_COLORS["sphere"], lw=2, ms=6)
+        _setup_ax(ax_cp, "M∞", "Cp,max", "Cp,max de estancamiento vs M∞")
+        plt.tight_layout()
+        fig.savefig(pd_dir / "capsule_MNM_vs_mach.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print("  ✓ capsule_MNM_vs_mach.png")
+
+    # ── 5. Esfera: CD vs Mach (MNM sweep) ───────────────────────────────────
+    if sphere_mach_rows:
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        fig.suptitle("Esfera — Coeficientes vs M∞  (MNM, α=0°)", fontsize=14, fontweight="bold")
+        M  = _col(sphere_mach_rows, "Mach")
+        CD = _col(sphere_mach_rows, "CD")
+        CP = _col(sphere_mach_rows, "cp_max_stagnation")
+        ax0, ax1 = axes
+        ax0.plot(M, CD, "o-", color=_COLORS["sphere"], lw=2.5, ms=7, label="MNM")
+        ax0.axhline(y=2.0, color=_COLORS["MN"], lw=1.5, ls="--", label="MN (CD=2)")
+        if sphere_mn_cases:
+            ax0.scatter([8], [sphere_mn_cases.get("sphere_MN_a0_M8_CD", None)],
+                        color=_COLORS["MN"], zorder=5, s=60, marker="^", label="MN M=8")
+        _setup_ax(ax0, "M∞", "CD", "CD vs M∞ — Esfera")
+        ax0.legend(fontsize=10)
+        ax1.plot(M, CP, "^-", color="#FF9800", lw=2.5, ms=7)
+        _setup_ax(ax1, "M∞", "Cp,max", "Cp,max vs M∞ — Esfera (Rayleigh-Pitot)")
+        plt.tight_layout()
+        fig.savefig(pd_dir / "sphere_vs_mach.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print("  ✓ sphere_vs_mach.png")
+
+    # ── helpers de malla (usados en secciones 6 y 7) ─────────────────────────
+    _tri = mesh_tri_counts or {}
+    _mesh_colors  = plt.cm.plasma(np.linspace(0.1, 0.85, max(len(mesh_sweeps_mn or {}), 1)))
+    _mesh_markers = ["o", "s", "^", "D", "v", "P", "X"]
+
+    def _mesh_lbl(name):
+        n = _tri.get(name)
+        return f"ARD_{n:,}" if n else name
+
+    # ── 6. Error relativo — referencia = malla más fina ─────────────────────
+    def _mesh_error_plots(sweeps, method_label, fname_suffix, x_key, x_label, coefs=None):
+        """Plots error (%) de cada malla frente a la ultrafina.
+        x_key / x_label: 'alpha_deg'/'α (°)'  o  'Mach'/'M∞'.
+        """
+        if not sweeps or len(sweeps) < 2:
+            return
+        if coefs is None:
+            coefs = ["CD", "CL", "CM"]
+        _tri_local = mesh_tri_counts or {}
+        ref_name   = max(sweeps.keys(), key=lambda n: _tri_local.get(n, 0))
+        ref_rows   = sweeps[ref_name]
+
+        colors_err  = plt.cm.viridis(np.linspace(0.1, 0.85, len(sweeps) - 1))
+        markers_err = ["o", "s", "^", "D", "v", "P"]
+
+        for coef in coefs:
+            ref_vals = {r[x_key]: r[coef] for r in ref_rows}
+            fig, ax  = plt.subplots(figsize=(9, 5))
+            ci = 0
+            for name, rows in sweeps.items():
+                if name == ref_name:
+                    continue
+                xs   = [r[x_key] for r in rows]
+                errs = []
+                for r in rows:
+                    ref_v = ref_vals.get(r[x_key])
+                    if ref_v is None or abs(ref_v) < 1e-12:
+                        errs.append(0.0)
+                    else:
+                        errs.append(abs(r[coef] - ref_v) / abs(ref_v) * 100.0)
+                ax.plot(xs, errs,
+                        marker=markers_err[ci % len(markers_err)],
+                        color=colors_err[ci], lw=2, ms=6, label=_mesh_lbl(name))
+                ci += 1
+            ax.axhline(y=5, color="red",    ls="--", lw=1.5, label="5%")
+            ax.axhline(y=1, color="orange", ls=":",  lw=1.2, label="1%")
+            ref_lbl = _mesh_lbl(ref_name)
+            _setup_ax(ax, x_label, f"Δ{coef} / {coef}_ref  (%)",
+                      f"Error {coef} vs {x_label} — ref. {ref_lbl}  ({method_label})")
+            ax.legend(fontsize=9)
+            plt.tight_layout()
+            fig.savefig(mesh_dir / f"mesh_error_{coef}_{fname_suffix}.png", dpi=150, bbox_inches="tight")
+            plt.close(fig)
+            print(f"  ✓ mesh_error_{coef}_{fname_suffix}.png")
+
+    # vs alpha
+    _mesh_error_plots(mesh_sweeps_mn,  "MN",  "MN_alpha",  "alpha_deg", "α (°)")
+    _mesh_error_plots(mesh_sweeps_mnm, "MNM", "MNM_alpha", "alpha_deg", "α (°)")
+    # vs Mach  (MNM; MN no depende de Mach)
+    _mesh_error_plots(mesh_mach_sweeps_mnm, "MNM", "MNM_mach", "Mach", "M∞",
+                      coefs=["CD", "CL", "CM", "cp_max_stagnation"])
+
+    # ── 7. Todas las mallas: coeficientes vs alpha ───────────────────────────
+    if mesh_sweeps_mn:
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        fig.suptitle("Sensibilidad de malla — Coeficientes vs α  (MN)", fontsize=14, fontweight="bold")
+        for ax, key in zip(axes, ["CD", "CL", "CM"]):
+            for idx, (name, rows) in enumerate(mesh_sweeps_mn.items()):
+                ax.plot(_col(rows, "alpha_deg"), _col(rows, key),
+                        f"{_mesh_markers[idx % len(_mesh_markers)]}-",
+                        color=_mesh_colors[idx], label=_mesh_lbl(name), lw=2, ms=6)
+            _setup_ax(ax, "α (°)", key, f"{key} vs α — todas las mallas (MN)")
+            ax.legend(fontsize=8)
+        plt.tight_layout()
+        fig.savefig(mesh_dir / "mesh_all_alpha_MN.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print("  ✓ mesh_all_alpha_MN.png")
+
+    if mesh_sweeps_mnm:
+        mach_label = next(iter(mesh_sweeps_mnm.values()))[0].get("Mach", "?") if mesh_sweeps_mnm else "?"
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        fig.suptitle(f"Sensibilidad de malla — Coeficientes vs α  (MNM, M∞={mach_label})", fontsize=14, fontweight="bold")
+        for ax, key in zip(axes, ["CD", "CL", "CM"]):
+            for idx, (name, rows) in enumerate(mesh_sweeps_mnm.items()):
+                ax.plot(_col(rows, "alpha_deg"), _col(rows, key),
+                        f"{_mesh_markers[idx % len(_mesh_markers)]}-",
+                        color=_mesh_colors[idx], label=_mesh_lbl(name), lw=2, ms=6)
+            _setup_ax(ax, "α (°)", key, f"{key} vs α — todas las mallas (MNM)")
+            ax.legend(fontsize=8)
+        plt.tight_layout()
+        fig.savefig(mesh_dir / "mesh_all_alpha_MNM.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print("  ✓ mesh_all_alpha_MNM.png")
+
+    # ── 8. Todas las mallas: CD / CL / CM / Cp_max vs Mach (MNM) ────────────
+    if mesh_mach_sweeps_mnm and len(mesh_mach_sweeps_mnm) >= 1:
+        alpha_lbl = next(iter(mesh_mach_sweeps_mnm.values()))[0].get("alpha_deg", "?")
+        for coef, ylabel, fname in [
+            ("CD",                 "CD",     "mesh_mach_CD_MNM.png"),
+            ("CL",                 "CL",     "mesh_mach_CL_MNM.png"),
+            ("CM",                 "CM",     "mesh_mach_CM_MNM.png"),
+            ("cp_max_stagnation",  "Cp,max", "mesh_mach_Cpmax_MNM.png"),
+        ]:
+            fig, ax = plt.subplots(figsize=(9, 5))
+            for idx, (name, rows) in enumerate(mesh_mach_sweeps_mnm.items()):
+                M_vals = _col(rows, "Mach")
+                c_vals = _col(rows, coef)
+                ax.plot(M_vals, c_vals,
+                        marker=_mesh_markers[idx % len(_mesh_markers)],
+                        color=_mesh_colors[idx], lw=2, ms=6, label=_mesh_lbl(name))
+            _setup_ax(ax, "M∞", ylabel,
+                      f"{ylabel} vs M∞ — todas las mallas (MNM, α={alpha_lbl}°)")
+            ax.legend(fontsize=9)
+            plt.tight_layout()
+            fig.savefig(mesh_dir / fname, dpi=150, bbox_inches="tight")
+            plt.close(fig)
+            print(f"  ✓ {fname}")
+
+    # ── 9. Cp_max vs alpha (MN vs MNM) ──────────────────────────────────────
+    if rows_mn and rows_mnm:
+        fig, ax = plt.subplots(figsize=(9, 5))
+        ax.plot(_col(rows_mn,  "alpha_deg"), _col(rows_mn,  "cp_max"),
+                "o-", color=_COLORS["MN"],  lw=2.5, ms=7, label="MN  Cp,max")
+        ax.plot(_col(rows_mn,  "alpha_deg"), _col(rows_mn,  "cp_min"),
+                "o--", color=_COLORS["MN"], lw=1.5, ms=5, alpha=0.6, label="MN  Cp,min")
+        ax.plot(_col(rows_mnm, "alpha_deg"), _col(rows_mnm, "cp_max_stagnation"),
+                "s-", color=_COLORS["MNM"], lw=2.5, ms=7, label="MNM Cp,max")
+        ax.plot(_col(rows_mnm, "alpha_deg"), _col(rows_mnm, "cp_min"),
+                "s--", color=_COLORS["MNM"], lw=1.5, ms=5, alpha=0.6, label="MNM Cp,min")
+        _setup_ax(ax, "α (°)", "Cp", "Cp máximo y mínimo vs α — Cápsula (MN vs MNM)")
+        ax.legend(fontsize=10)
+        fig.tight_layout()
+        fig.savefig(pd_dir / "capsule_Cp_vs_alpha.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print("  ✓ capsule_Cp_vs_alpha.png")
+
+    print(f"\n  Gráficas guardadas en: {pd_dir}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Pipeline principal
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -224,6 +502,8 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     RUN_MNM_SWEEP        = config.get("RUN_MNM_SWEEP", True)
     RUN_MACH_SWEEP       = config.get("RUN_MACH_SWEEP", True)
     RUN_MESH_SENSITIVITY = config.get("RUN_MESH_SENSITIVITY", True)
+    RUN_SPHERE_MACH_SWEEP = config.get("RUN_SPHERE_MACH_SWEEP", True)
+    RUN_MESH_ALPHA_SWEEP  = config.get("RUN_MESH_ALPHA_SWEEP", True)
 
     MESH_ALPHA = config.get("MESH_ALPHA", 10.0)
     MESH_MACH  = config.get("MESH_MACH", 8.0)
@@ -235,6 +515,11 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
 
     GROUP_ID = config["GROUP_ID"]
     MEMBERS  = config["MEMBERS"]
+
+    # Inicializar resultados de sweeps como None (se asignan si el sweep se ejecuta)
+    rows_mn = rows_mnm = rows_mach = rows_mesh = None
+    rows_mn_coarse = rows_mn_fine = rows_mnm_coarse = rows_mnm_fine = None
+    sphere_mach_rows = None
 
     eD0 = np.array([0., -1.,  0.])
     eL0 = np.array([0.,  0., -1.])
@@ -328,6 +613,15 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     n_tri_sp = len(a_sp)
     print(f"  R={R_sp:.2f} mm  S_ref={S_sp:.2f} mm²  L_ref={L_sp:.2f} mm  triángulos={n_tri_sp}")
 
+    if RUN_SPHERE_MACH_SWEEP:
+        SPHERE_MACH_SWEEP = config.get("SPHERE_MACH_SWEEP", [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0])
+        print(f"\n── Barrido Mach MNM esfera | M={SPHERE_MACH_SWEEP}  α=0°")
+        sphere_mach_rows = run_mach_sweep(
+            SPHERE_MACH_SWEEP, 0.0, c_sp, a_sp, n_sp,
+            S_sp, L_sp, r_sp, eD0, eL0, eM0, GAMMA,
+        )
+        save_csv(csv_dir / "results_sphere_mnm_mach_sweep.csv", sphere_mach_rows, CSV_FIELDS_MNM)
+
     if STL_COARSE is not None and STL_COARSE.exists():
         print(f"  Cargando malla gruesa: {STL_COARSE.name}")
         mesh_co = load_stl(STL_COARSE)
@@ -347,6 +641,62 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     else:
         c_fi, a_fi, n_fi, n_tri_fi = c_cap, a_cap, n_cap, n_tri_cap
         STL_FINE = STL_CAPSULE
+
+    # dict {stem: rows_mn} y {stem: rows_mnm} para todas las mallas de sensibilidad
+    mesh_sweeps_mn      = {}
+    mesh_sweeps_mnm     = {}
+    mesh_mach_sweeps_mnm = {}   # {stem: rows_mach}  — barrido Mach por malla
+    mesh_tri_counts     = {}    # {stem: n_tri}
+
+    if config.get("RUN_MESH_ALPHA_SWEEP", True) and MESH_STLS:
+        print(f"\n── Barrido alpha (MN + MNM) para todas las mallas de sensibilidad")
+        for stl_p in MESH_STLS:
+            if not stl_p.exists():
+                print(f"  [SKIP] {stl_p.name}"); continue
+            m_sw  = load_stl(stl_p)
+            g_sw  = compute_face_geometry(m_sw)
+            c_sw  = g_sw["centers"]; a_sw = g_sw["areas"]; n_sw = g_sw["normals"]
+            name  = stl_p.stem
+            print(f"  {name}")
+            rows_mn_sw = run_mn_sweep(ALPHAS_DEG, c_sw, a_sw, n_sw,
+                                      S_cap, L_cap, r_cap, eD0, eL0, eM0)
+            save_csv(csv_dir / f"results_mn_{name}.csv", rows_mn_sw, CSV_FIELDS_MN)
+            rows_mnm_sw = run_mnm_sweep(ALPHAS_DEG, MACH, c_sw, a_sw, n_sw,
+                                        S_cap, L_cap, r_cap, eD0, eL0, eM0, GAMMA)
+            save_csv(csv_dir / f"results_mnm_{name}_M{int(MACH)}.csv", rows_mnm_sw, CSV_FIELDS_MNM)
+            mesh_sweeps_mn[name]  = rows_mn_sw
+            mesh_sweeps_mnm[name] = rows_mnm_sw
+            mesh_tri_counts[name] = len(a_sw)
+
+    if config.get("RUN_MESH_ALPHA_SWEEP", True) and MESH_STLS and MACH_SWEEP:
+        alpha_mesh = config.get("MESH_ALPHA", 10.0)
+        eD_mm, eL_mm, eM_mm = wind_axes(alpha_mesh)
+        print(f"\n── Barrido Mach MNM para todas las mallas (α={alpha_mesh}°)")
+        for stl_p in MESH_STLS:
+            if not stl_p.exists():
+                print(f"  [SKIP] {stl_p.name}"); continue
+            name = stl_p.stem
+            if name not in mesh_tri_counts:   # aún no cargada (alpha sweep desactivado)
+                m_mm = load_stl(stl_p)
+                g_mm = compute_face_geometry(m_mm)
+                c_mm = g_mm["centers"]; a_mm = g_mm["areas"]; n_mm = g_mm["normals"]
+                mesh_tri_counts[name] = len(a_mm)
+            else:
+                m_mm = load_stl(stl_p)
+                g_mm = compute_face_geometry(m_mm)
+                c_mm = g_mm["centers"]; a_mm = g_mm["areas"]; n_mm = g_mm["normals"]
+            print(f"  {name}")
+            rows_mach_mm = run_mach_sweep(
+                MACH_SWEEP, alpha_mesh, c_mm, a_mm, n_mm,
+                S_cap, L_cap, r_cap, eD_mm, eL_mm, eM_mm, GAMMA,
+            )
+            mesh_mach_sweeps_mnm[name] = rows_mach_mm
+
+    # Mantener compatibilidad con variables coarse/fine para los 9 casos
+    rows_mn_coarse  = mesh_sweeps_mn.get(STL_COARSE.stem)  if STL_COARSE else None
+    rows_mn_fine    = mesh_sweeps_mn.get(STL_FINE.stem)    if STL_FINE   else None
+    rows_mnm_coarse = mesh_sweeps_mnm.get(STL_COARSE.stem) if STL_COARSE else None
+    rows_mnm_fine   = mesh_sweeps_mnm.get(STL_FINE.stem)   if STL_FINE   else None
 
     # ══════════════════════════════════════════════════════════════════════
     # 9 CASOS OBLIGATORIOS
@@ -499,4 +849,31 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
         stl_coarse    = MESH_STLS[0] if RUN_MESH_SENSITIVITY and MESH_STLS else None,
         mesh_sens_csv = mesh_csv,
         out_path      = results_dir / "report_3d.html",
+    )
+
+    # ── Gráficas analíticas ──────────────────────────────────────────────────
+    print("\n" + "═"*60)
+    print("Generando gráficas analíticas …")
+    print("═"*60)
+    sphere_mn_cases = {
+        "sphere_MN_a0_M8_CD": float(np.dot(r1["CF_total"], wind_axes(0.0)[0])),
+    }
+    generate_plots(
+        plots_dir=plots_dir,
+        rows_mn=rows_mn if RUN_MN_SWEEP else None,
+        rows_mnm=rows_mnm if RUN_MNM_SWEEP else None,
+        rows_mach=rows_mach if RUN_MACH_SWEEP else None,
+        rows_mesh=rows_mesh if RUN_MESH_SENSITIVITY and MESH_STLS else None,
+        rows_mn_coarse=rows_mn_coarse,
+        rows_mn_fine=rows_mn_fine,
+        rows_mnm_coarse=rows_mnm_coarse,
+        rows_mnm_fine=rows_mnm_fine,
+        sphere_mach_rows=sphere_mach_rows,
+        sphere_mn_cases=sphere_mn_cases,
+        coarse_label=STL_COARSE.stem if STL_COARSE else "coarse",
+        fine_label=STL_FINE.stem   if STL_FINE   else "fine",
+        mesh_sweeps_mn=mesh_sweeps_mn           if mesh_sweeps_mn       else None,
+        mesh_sweeps_mnm=mesh_sweeps_mnm         if mesh_sweeps_mnm      else None,
+        mesh_mach_sweeps_mnm=mesh_mach_sweeps_mnm if mesh_mach_sweeps_mnm else None,
+        mesh_tri_counts=mesh_tri_counts         if mesh_tri_counts      else None,
     )

@@ -31,10 +31,10 @@ PLOTS_DIR.mkdir(exist_ok=True)
 config = {
 
     # ── Geometrías STL ──────────────────────────────────────────────────────
-    "STL_CAPSULE": DATA_DIR / "Capsula" / "PruebaARD3.stl",   # malla principal
-    "STL_SPHERE":  DATA_DIR / "esfera.stl",                 
-    "STL_COARSE":  DATA_DIR / "Capsula" / "PruebaARD.stl",    # 182 caras
-    "STL_FINE":    DATA_DIR / "Capsula" / "PruebaARD4.stl",   # 1510 caras
+    "STL_CAPSULE": DATA_DIR / "Capsula" / "ARD_coarse.stl",     # malla principal
+    "STL_SPHERE":  DATA_DIR / "esfera" / "esfera.stl",
+    "STL_COARSE":  DATA_DIR / "Capsula" / "ARD_coarsest.stl",   # malla gruesa
+    "STL_FINE":    DATA_DIR / "Capsula" / "ARD_ultrafine.stl",  # malla fina
 
     # ── Condiciones de flujo ────────────────────────────────────────────────
     "ALPHAS_DEG": [0.0, 10.0, 20.0, 30.0],        # barrido en alpha (para sweeps)
@@ -52,14 +52,20 @@ config = {
     "RUN_MACH_SWEEP":       True,   # barrido Mach MNM a α=0 → results_mnm_mach_sweep.csv
     "RUN_MESH_SENSITIVITY": True,   # comparativa 4 mallas → results_mesh_sensitivity.csv
 
+    # ── Barridos adicionales para gráficas ─────────────────────────────────
+    "RUN_SPHERE_MACH_SWEEP": True,   # sweep Mach MNM para esfera (validación)
+    "SPHERE_MACH_SWEEP":     [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0],
+    "RUN_MESH_ALPHA_SWEEP":  True,   # sweeps alpha para malla gruesa y fina
+
     # ── Sensibilidad de malla ───────────────────────────────────────────────
     "MESH_ALPHA": 10.0,
     "MESH_MACH":  8.0,
     "MESH_STLS": [
-        DATA_DIR / "Capsula" / "PruebaARD.stl",   # muy gruesa  ~182
-        DATA_DIR / "Capsula" / "PruebaARD3.stl",  # media       ~1510
-        DATA_DIR / "Capsula" / "PruebaARD4.stl",  # media-alta  ~1510
-        DATA_DIR / "Capsula" / "PruebaARD2.stl",  # muy fina    ~400k
+        DATA_DIR / "Capsula" / "ARD_coarsest.stl",
+        DATA_DIR / "Capsula" / "ARD_coarse.stl",
+        DATA_DIR / "Capsula" / "ARD_fine.stl",
+        DATA_DIR / "Capsula" / "ARD_chillfine.stl",
+        DATA_DIR / "Capsula" / "ARD_ultrafine.stl",
     ],
 
     # ── Visualización geométrica al arrancar ────────────────────────────────
