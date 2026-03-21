@@ -494,6 +494,134 @@ def generate_plots(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# MN vs MNM: coeficientes vs Mach y vs alpha
+# ══════════════════════════════════════════════════════════════════════════════
+
+def generate_mn_vs_mnm_plots(
+    centers, areas, normals, S_ref, L_ref, r_ref,
+    alphas_deg: list,
+    mach_sweep: list,
+    plots_dir: Path,
+    gamma: float = 1.4,
+):
+    """
+    Genera 2 gráficas en plots_dir/MNvsMNM/:
+      1. coeff_vs_Mach.png   — CD, CL, CM vs M∞ a α=0  (MN=cte, MNM varía)
+      2. coeff_vs_alpha.png  — CD, CL, CM vs α        (MN + MNM a varios Mach)
+    """
+    out_dir = Path(plots_dir) / "MNvsMNM"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    C_MN  = "#1a3a5c"   # azul oscuro para MN
+    C_MNM = "#B71C1C"   # rojo para MNM
+    # paleta para distintos Machs en el sweep MNM
+    mach_colors = plt.cm.plasma(np.linspace(0.15, 0.85, len(mach_sweep)))
+
+    # ── Ejes viento para cada alpha ──────────────────────────────────────────
+    def _axes(a):
+        return wind_axes(float(a))
+
+    # ── Plot 1 — coeficientes vs Mach (varios alpha) ────────────────────────
+    # Una curva por alpha: MNM = línea sólida, MN = línea discontinua
+    # Mismo color para MN y MNM del mismo alpha → fácil comparación
+    alpha_colors = plt.cm.coolwarm(np.linspace(0.05, 0.95, len(alphas_deg)))
+
+    # Precalcular MN (Mach-independiente) y MNM vs Mach para cada alpha
+    mn_per_alpha  = {}   # {a: (CD, CL, CM)}
+    mnm_per_alpha = {}   # {a: (CD_list, CL_list, CM_list) vs mach_sweep}
+    for a in alphas_deg:
+        eD, eL, eM = _axes(a)
+        r_mn = solve_newton_case(
+            centers=centers, areas=areas, normals=normals, alpha_deg=float(a),
+            S_ref=S_ref, L_ref=L_ref, r_ref=r_ref, eD=eD, eL=eL, eM=eM,
+        )
+        mn_per_alpha[a] = (r_mn["CD"], r_mn["CL"], r_mn["CM"])
+
+        cd_l, cl_l, cm_l = [], [], []
+        for M in mach_sweep:
+            r = solve_modified_newton_case(
+                centers=centers, areas=areas, normals=normals,
+                alpha_deg=float(a), Mach=float(M),
+                S_ref=S_ref, L_ref=L_ref, r_ref=r_ref,
+                eD=eD, eL=eL, eM=eM, gamma=gamma,
+            )
+            cd_l.append(r["CD"]); cl_l.append(r["CL"]); cm_l.append(r["CM"])
+        mnm_per_alpha[a] = (cd_l, cl_l, cm_l)
+
+    fig1, axes1 = plt.subplots(1, 3, figsize=(15, 5))
+    for ax, coef, coef_idx in zip(axes1, ["CD", "CL", "CM"], [0, 1, 2]):
+        for a, col in zip(alphas_deg, alpha_colors):
+            mn_val  = mn_per_alpha[a][coef_idx]
+            mnm_vals = mnm_per_alpha[a][coef_idx]
+            lbl = f"α={a:+.0f}°"
+            # MNM — línea sólida
+            ax.plot(mach_sweep, mnm_vals, color=col, lw=1.8, marker="o", ms=4,
+                    label=f"MNM {lbl}")
+            # MN — línea discontinua (valor constante)
+            ax.axhline(mn_val, color=col, lw=1.4, ls="--",
+                       label=f"MN  {lbl}")
+        ax.axhline(0, color="#bbbbbb", lw=0.8, ls=":")
+        _setup_ax(ax, xlabel="M∞", ylabel=coef,
+                  title=f"{coef} vs M∞")
+        ax.legend(fontsize=6.5, ncol=2, loc="best")
+    fig1.suptitle("MN vs MNM — Coeficientes vs M∞  (varios α)\nMNM = sólido  ·  MN = discontinuo",
+                  fontsize=12, fontweight="bold")
+    plt.tight_layout()
+    fig1.savefig(out_dir / "coeff_vs_Mach.png", dpi=150, bbox_inches="tight")
+    plt.close(fig1)
+    print("  ✓ coeff_vs_Mach.png")
+
+    # ── Plot 2 — coeficientes vs alpha (MN + MNM a varios Mach) ─────────────
+    # MN sweep en alpha
+    mn_CD, mn_CL, mn_CM = [], [], []
+    for a in alphas_deg:
+        eD, eL, eM = _axes(a)
+        r = solve_newton_case(
+            centers=centers, areas=areas, normals=normals, alpha_deg=float(a),
+            S_ref=S_ref, L_ref=L_ref, r_ref=r_ref, eD=eD, eL=eL, eM=eM,
+        )
+        mn_CD.append(r["CD"]); mn_CL.append(r["CL"]); mn_CM.append(r["CM"])
+
+    # MNM sweep en alpha para cada Mach
+    mnm_per_mach = {}   # {M: (CD_list, CL_list, CM_list)}
+    for M in mach_sweep:
+        cd_l, cl_l, cm_l = [], [], []
+        for a in alphas_deg:
+            eD, eL, eM = _axes(a)
+            r = solve_modified_newton_case(
+                centers=centers, areas=areas, normals=normals, alpha_deg=float(a), Mach=float(M),
+                S_ref=S_ref, L_ref=L_ref, r_ref=r_ref, eD=eD, eL=eL, eM=eM, gamma=gamma,
+            )
+            cd_l.append(r["CD"]); cl_l.append(r["CL"]); cm_l.append(r["CM"])
+        mnm_per_mach[M] = (cd_l, cl_l, cm_l)
+
+    fig2, axes2 = plt.subplots(1, 3, figsize=(15, 5))
+    for ax, coef, mn_vals, coef_idx in zip(
+        axes2,
+        ["CD", "CL", "CM"],
+        [mn_CD, mn_CL, mn_CM],
+        [0,     1,     2],
+    ):
+        # MN
+        ax.plot(alphas_deg, mn_vals, color=C_MN, lw=2.5, marker="o", ms=6, label="MN", zorder=5)
+        # MNM por Mach
+        for M, col in zip(mach_sweep, mach_colors):
+            vals = mnm_per_mach[M][coef_idx]
+            ax.plot(alphas_deg, vals, color=col, lw=1.6, marker="s", ms=4,
+                    label=f"MNM M={M:.0f}")
+        ax.axhline(0, color="#bbbbbb", lw=0.8, ls=":")
+        _setup_ax(ax, xlabel="α (°)", ylabel=coef,
+                  title=f"{coef} vs α")
+        ax.legend(fontsize=7, ncol=2)
+    fig2.suptitle("MN vs MNM — Coeficientes vs α   (MNM a varios M∞)", fontsize=13, fontweight="bold")
+    plt.tight_layout()
+    fig2.savefig(out_dir / "coeff_vs_alpha.png", dpi=150, bbox_inches="tight")
+    plt.close(fig2)
+    print("  ✓ coeff_vs_alpha.png")
+    print(f"  → Plots MN vs MNM guardados en {out_dir}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Barlovento / Sotavento + CD vs α multi-Mach
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1055,6 +1183,18 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
                 alpha_ref=CP_MAP_ALPHA if CP_MAP_ALPHA is not None else 20.0,
                 gamma=GAMMA,
             )
+
+        print("\n" + "═"*60)
+        print("MN vs MNM — coeficientes vs Mach y vs alpha …")
+        print("═"*60)
+        generate_mn_vs_mnm_plots(
+            centers=_c, areas=_a, normals=_n,
+            S_ref=_S, L_ref=_L, r_ref=_r,
+            alphas_deg=ALPHAS_DEG,
+            mach_sweep=MACH_SWEEP,
+            plots_dir=cap_plots_dir,
+            gamma=GAMMA,
+        )
 
         # ── Almacenar datos de la cápsula primaria ───────────────────────────
         if _cap_idx == 0:
