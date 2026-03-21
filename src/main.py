@@ -71,7 +71,13 @@ config = {
     # ── Visualización geométrica al arrancar ────────────────────────────────
     "SHOW_GEOMETRY": True,
 
-    # ── Alpha trim (externo, p.ej. del libro) ───────────────────────────────
+    # ── Validación esfera vs datos MATLAB ───────────────────────────────────
+    "RUN_VALIDATION":        True,
+    "STL_VALIDATION_SPHERE": DATA_DIR / "esfera" / "esfera1.stl",
+    "VALIDATION_CSV":        ROOT / "Matlab" / "variables_esfera1.csv",
+    "VALIDATION_MACH_LIST":  [2, 4, 6, 8, 10, 15, 20],
+
+    # ── Alpha trim ───────────────────────────────
     "ALPHA_TRIM_DEG":    -21.0,   # None = no calcular
     "ALPHA_TRIM_METHOD": "MNM",
 

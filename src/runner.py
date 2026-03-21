@@ -479,6 +479,163 @@ def generate_plots(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Validación: esfera vs datos MATLAB
+# ══════════════════════════════════════════════════════════════════════════════
+
+def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
+    """Compara el modelo MN/MNM con los datos de la esfera exportados desde MATLAB.
+
+    Genera plots en plots_dir/Validacion/:
+      - validacion_Cp_vs_cosphi.png
+      - validacion_Cp_vs_angulo.png
+      - validacion_CD_vs_Mach.png
+    """
+    import trimesh
+
+    STL_SPHERE  = config.get("STL_VALIDATION_SPHERE",
+                             config.get("STL_SPHERE"))          # esfera1 o esfera
+    MATLAB_CSV  = config.get("VALIDATION_CSV")                  # obligatorio
+    MACH_LIST   = config.get("VALIDATION_MACH_LIST",
+                             [2, 4, 6, 8, 10, 15, 20])
+
+    if not MATLAB_CSV or not Path(MATLAB_CSV).exists():
+        print(f"  [SKIP] Validación: CSV no encontrado ({MATLAB_CSV})")
+        return
+    if not STL_SPHERE or not Path(STL_SPHERE).exists():
+        print(f"  [SKIP] Validación: STL esfera no encontrado ({STL_SPHERE})")
+        return
+
+    val_dir = Path(plots_dir) / "Validacion"
+    val_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Cargar STL ──────────────────────────────────────────────────────────
+    mesh   = trimesh.load(str(STL_SPHERE), force="mesh")
+    verts  = np.asarray(mesh.vertices, dtype=float)
+    faces  = np.asarray(mesh.faces,    dtype=int)
+    v0, v1, v2 = verts[faces[:,0]], verts[faces[:,1]], verts[faces[:,2]]
+    cross  = np.cross(v1-v0, v2-v0)
+    norms_ = np.linalg.norm(cross, axis=1, keepdims=True)
+    tnorm  = cross / (norms_ + 1e-30)          # normales unitarias outward
+    areas  = np.linalg.norm(cross, axis=1) / 2.0
+    centers = (v0 + v1 + v2) / 3.0
+
+    # ── Cargar CSV MATLAB ───────────────────────────────────────────────────
+    cp_matlab = np.genfromtxt(MATLAB_CSV, delimiter=",", skip_header=1,
+                               usecols=[0])
+    n_stl = len(faces)
+    n_csv = len(cp_matlab)
+    if n_stl != n_csv:
+        print(f"  [WARN] Validación: STL tiene {n_stl} caras, CSV tiene {n_csv} filas. "
+              f"Usando las primeras {min(n_stl, n_csv)}.")
+        n = min(n_stl, n_csv)
+        cp_matlab = cp_matlab[:n]
+        tnorm = tnorm[:n]
+        areas = areas[:n]
+        centers = centers[:n]
+
+    # ── Ángulos ─────────────────────────────────────────────────────────────
+    U_DIR   = np.array([0., 1., 0.])           # dirección flujo en MATLAB
+    Stheta  = tnorm @ U_DIR                     # dot(U, outward_normal)
+
+    # ── MN numérico sobre el STL ─────────────────────────────────────────────
+    # Nota: nuestro solver usa flujo en -y (alpha=0), MATLAB usa flujo en +y.
+    # Para una esfera simétrica ambas mitades dan la misma distribución Cp vs mu.
+    # Usamos mu del solver como eje x para el modelo, y -Stheta para MATLAB.
+    ext   = verts.max(0) - verts.min(0)
+    S_ref = float(ext[0] * ext[2])
+    L_ref = float(ext[1])
+    r_ref = np.average(centers, axis=0, weights=areas)
+    # eD en la dirección del flujo del solver ([0,-1,0])
+    flow_solver = np.array([0., -1., 0.])
+    eM = np.array([1., 0., 0.])
+    eL = np.cross(eM, flow_solver); eL /= np.linalg.norm(eL)
+
+    r_mn     = solve_newton_case(
+        centers=centers, areas=areas, normals=tnorm,
+        alpha_deg=0.0, S_ref=S_ref, L_ref=L_ref, r_ref=r_ref,
+        eD=flow_solver, eL=eL, eM=eM,
+    )
+    cp_model = np.array(r_mn["cp"])          # Cp numérico por cara
+    mu       = np.array(r_mn["mu"])          # cos(incidencia) en conv. solver
+    CD_mn    = float(r_mn["CD"])
+    print(f"  MN numérico:  CD={CD_mn:.5f}  n_windward={r_mn['n_windward']:,}")
+
+    # Índices barlovento en cada convenio
+    rng              = np.random.default_rng(42)
+    idx_model_wind   = np.where(mu > 0)[0]           # barlovento solver
+    idx_matlab_wind  = np.where(Stheta < 0)[0]       # barlovento MATLAB (-Stheta > 0)
+    n_sample         = min(3000, len(idx_model_wind), len(idx_matlab_wind))
+    s_model = rng.choice(idx_model_wind,  size=n_sample, replace=False)
+    s_matlab = rng.choice(idx_matlab_wind, size=n_sample, replace=False)
+
+    # x-axis: mu para el modelo, -Stheta para MATLAB (ambos = cos(incidencia local))
+    x_model  = mu[s_model]
+    x_matlab = -Stheta[s_matlab]
+
+    # ── Plot 1: Cp vs cos(φ) ────────────────────────────────────────────────
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.scatter(x_model,  cp_model[s_model],    s=20, alpha=0.6,
+               color="crimson",   zorder=3, label="MN (modelo)")
+    ax.scatter(x_matlab, cp_matlab[s_matlab],  s=8,  alpha=0.5,
+               color="steelblue", zorder=5, label="Dato MATLAB")
+    ax.set_xlabel("cos φ  (ángulo de incidencia local)", fontsize=12)
+    ax.set_ylabel("Cp", fontsize=12)
+    ax.set_title("Validación esfera — Cp vs cos φ\nDato MATLAB vs MN (modelo numérico)",
+                 fontsize=12, fontweight="bold")
+    ax.set_xlim(0, 1.05); ax.set_ylim(-0.05, 2.1)
+    ax.legend(fontsize=10, loc="upper left")
+    plt.tight_layout()
+    fig.savefig(val_dir / "validacion_Cp_vs_cosphi.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  ✓ validacion_Cp_vs_cosphi.png")
+
+    # ── Plot 2: Cp vs ángulo (°) ────────────────────────────────────────────
+    phi_model  = np.degrees(np.arccos(np.clip(x_model,  0, 1)))
+    phi_matlab = np.degrees(np.arccos(np.clip(x_matlab, 0, 1)))
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.scatter(phi_model,  cp_model[s_model],   s=20, alpha=0.6,
+               color="crimson",   zorder=3, label="MN (modelo)")
+    ax.scatter(phi_matlab, cp_matlab[s_matlab], s=8,  alpha=0.5,
+               color="steelblue", zorder=5, label="Dato MATLAB")
+    ax.set_xlabel("φ (°) desde estancamiento", fontsize=12)
+    ax.set_ylabel("Cp", fontsize=12)
+    ax.set_title("Validación esfera — Cp vs ángulo de incidencia\nDato MATLAB vs MN (modelo numérico)",
+                 fontsize=12, fontweight="bold")
+    ax.set_xlim(-1, 91); ax.set_ylim(-0.05, 2.1)
+    ax.legend(fontsize=10, loc="upper right")
+    plt.tight_layout()
+    fig.savefig(val_dir / "validacion_Cp_vs_angulo.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  ✓ validacion_Cp_vs_angulo.png")
+
+    # ── Plot 3: CD esfera vs Mach (MNM) — sin datos MATLAB, sólo modelo ────
+    CDs_mnm = []
+    for M in MACH_LIST:
+        r = solve_modified_newton_case(
+            centers=centers, areas=areas, normals=tnorm,
+            alpha_deg=0.0, Mach=float(M),
+            S_ref=S_ref, L_ref=L_ref, r_ref=r_ref,
+            eD=flow_solver, eL=eL, eM=eM, gamma=gamma,
+        )
+        CDs_mnm.append(float(np.dot(r["CF_total"], flow_solver)))
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.plot(MACH_LIST, CDs_mnm, "o-", color="#E53935", lw=2.5, ms=7, label="MNM (modelo)")
+    ax.axhline(CD_mn, color="#1565C0", ls="--", lw=2, label=f"MN (modelo)  CD={CD_mn:.3f}")
+    ax.set_xlabel("M∞", fontsize=12)
+    ax.set_ylabel("CD", fontsize=12)
+    ax.set_title("CD esfera vs M∞ — modelo MN / MNM", fontsize=12, fontweight="bold")
+    ax.legend(fontsize=10)
+    plt.tight_layout()
+    fig.savefig(val_dir / "validacion_CD_vs_Mach.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  ✓ validacion_CD_vs_Mach.png")
+
+    print(f"  → Plots guardados en {val_dir}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Pipeline principal
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -877,3 +1034,10 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
         mesh_mach_sweeps_mnm=mesh_mach_sweeps_mnm if mesh_mach_sweeps_mnm else None,
         mesh_tri_counts=mesh_tri_counts         if mesh_tri_counts      else None,
     )
+
+    # ── Validación esfera ────────────────────────────────────────────────────
+    if config.get("RUN_VALIDATION", False):
+        print("\n" + "═"*60)
+        print("Validación: esfera vs datos MATLAB …")
+        print("═"*60)
+        run_validation(config, plots_dir=plots_dir, gamma=GAMMA)
