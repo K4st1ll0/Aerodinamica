@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Documentación — Trabajo 1 · MN / MNM · G5</title>
+  <style>
+    :root {
+      --bg:        #ffffff;
+      --surface:   #f8f9fa;
+      --border:    #dee2e6;
+      --accent:    #1a3a5c;
+      --accent2:   #B71C1C;
+      --text:      #212529;
+      --muted:     #6c757d;
+      --code-bg:   #f1f3f5;
+      --radius:    6px;
+      --font-mono: "Courier New", Courier, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+      padding: 0 0 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 42px 60px 32px;
+    }
+    header h1 { font-size: 28px; font-weight: 700; letter-spacing: 0.4px; }
+    header p.sub { font-size: 14px; color: #a8bcd0; margin-top: 6px; }
+    header .meta {
+      display: flex; gap: 32px; flex-wrap: wrap;
+      margin-top: 20px; font-size: 13px; color: #c5d8ea;
+    }
+    header .meta span b { color: #fff; }
+
+    /* ── Layout ── */
+    .wrapper { max-width: 960px; margin: 0 auto; padding: 0 40px; }
+
+    /* ── TOC ── */
+    nav.toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 32px;
+      margin: 40px 0 48px;
+    }
+    nav.toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px;
+                 color: var(--muted); margin-bottom: 12px; }
+    nav.toc ol { padding-left: 20px; }
+    nav.toc li { margin: 4px 0; }
+    nav.toc a { color: var(--accent); text-decoration: none; font-size: 14px; }
+    nav.toc a:hover { text-decoration: underline; }
+
+    /* ── Sections ── */
+    section { margin-bottom: 60px; }
+    section + section { border-top: 1px solid var(--border); padding-top: 48px; }
+
+    h2.sec {
+      font-size: 20px; font-weight: 700; color: var(--accent);
+      margin-bottom: 20px;
+    }
+    h2.sec::before {
+      content: attr(data-n) ". ";
+      color: var(--accent2);
+    }
+    h3 { font-size: 15px; font-weight: 600; margin: 24px 0 10px; color: #1a1a2e; }
+    h4 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 18px 0 8px; }
+
+    p { margin: 0 0 12px; }
+    ul, ol { padding-left: 22px; margin-bottom: 12px; }
+    li { margin: 4px 0; }
+
+    /* ── Code ── */
+    code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--code-bg);
+      border-radius: 3px;
+      padding: 1px 5px;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 12px 0 20px;
+    }
+    pre code { background: none; padding: 0; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 12px 0 20px; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 14px;
+    }
+    thead tr { background: var(--accent); color: #fff; }
+    thead th { padding: 10px 14px; text-align: left; font-weight: 600; font-size: 13px; }
+    tbody tr:nth-child(even) { background: var(--surface); }
+    tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tbody td code { background: none; }
+
+    /* ── Math blocks ── */
+    .math {
+      background: var(--code-bg);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      margin: 12px 0 20px;
+      line-height: 1.8;
+    }
+
+    /* ── Callout ── */
+    .callout {
+      border-left: 4px solid var(--accent2);
+      background: #fff5f5;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    .callout.info {
+      border-color: var(--accent);
+      background: #f0f5ff;
+    }
+
+    /* ── File tree ── */
+    .tree {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 18px 22px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin: 12px 0 20px;
+    }
+    .tree .dir  { color: var(--accent); font-weight: 600; }
+    .tree .file { color: var(--text); }
+    .tree .note { color: var(--muted); font-style: italic; }
+
+    /* ── Plots grid ── */
+    .plots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin: 12px 0 20px;
+    }
+    .plot-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 13px;
+    }
+    .plot-card .fname { font-family: var(--font-mono); color: var(--accent2); font-size: 12px; margin-bottom: 4px; }
+    .plot-card .desc  { color: var(--muted); }
+
+    /* ── Diagram ── */
+    .axes-diagram {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      margin: 16px 0;
+    }
+    .axes-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 2;
+      min-width: 240px;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      margin-top: 60px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Trabajo 1 — Métodos de Inclinación Local</h1>
+  <p class="sub">Aerodinámica Hipersónica · MUSE · Curso 2025-26</p>
+  <div class="meta">
+    <span><b>Grupo</b> G5 – ARD</span>
+    <span><b>Métodos</b> MN (Newton) · MNM (Newton Modificado)</span>
+    <span><b>Geometría</b> Cápsula ARD · Esfera de validación</span>
+    <span><b>Revisión</b> 21 marzo 2026</span>
+  </div>
+  <div class="meta" style="margin-top:10px;">
+    <span>Pablo Castillo Jiménez &nbsp;·&nbsp; Alberto García Díaz &nbsp;·&nbsp; Ana Jorba Vera</span>
+  </div>
+</header>
+
+<div class="wrapper">
+
+  <!-- TOC -->
+  <nav class="toc">
+    <h2>Contenido</h2>
+    <ol>
+      <li><a href="#s1">Descripción general</a></li>
+      <li><a href="#s2">Estructura del repositorio</a></li>
+      <li><a href="#s3">Cómo ejecutar</a></li>
+      <li><a href="#s4">Configuración (main.py)</a></li>
+      <li><a href="#s5">Convenciones de coordenadas y signos</a></li>
+      <li><a href="#s6">Fundamento matemático</a></li>
+      <li><a href="#s7">Módulos del código</a></li>
+      <li><a href="#s8">Pipeline de ejecución</a></li>
+      <li><a href="#s9">Salidas generadas</a></li>
+      <li><a href="#s10">Casos del informe</a></li>
+      <li><a href="#s11">Gráficas producidas</a></li>
+      <li><a href="#s12">Añadir una cápsula nueva</a></li>
+    </ol>
+  </nav>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s1">
+    <h2 class="sec" data-n="1">Descripción general</h2>
+    <p>
+      Este repositorio implementa un pipeline de análisis aerodinámico hipersónico basado en
+      <strong>Métodos de Inclinación Local</strong>. Dados uno o más archivos STL de geometría,
+      el código calcula los coeficientes aerodinámicos <em>C<sub>D</sub></em>, <em>C<sub>L</sub></em>
+      y <em>C<sub>M</sub></em> mediante los métodos de Newton (MN) y Newton Modificado (MNM),
+      genera sweeps en ángulo de ataque y número de Mach, produce gráficas formales y exporta
+      los resultados en CSV, JSON y HTML interactivo 3D.
+    </p>
+    <p>
+      El diseño separa completamente la <strong>configuración</strong> (en <code>main.py</code>)
+      de la <strong>implementación</strong> (en <code>runner.py</code> y los módulos de física).
+      Para analizar una geometría nueva solo hay que añadir su ruta STL a la lista
+      <code>CAPSULES</code> de <code>main.py</code>.
+    </p>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s2">
+    <h2 class="sec" data-n="2">Estructura del repositorio</h2>
+    <div class="tree">
+<span class="dir">Trabajo1/Aerodinamica/</span><br>
+├── <span class="file">run.py</span>          <span class="note">← punto de entrada alternativo</span><br>
+├── <span class="dir">src/</span><br>
+│   ├── <span class="file">main.py</span>     <span class="note">← configuración: qué geometrías, qué sweeps</span><br>
+│   ├── <span class="file">runner.py</span>   <span class="note">← pipeline completo (no editar)</span><br>
+│   ├── <span class="file">MN.py</span>       <span class="note">← Método de Newton puro</span><br>
+│   ├── <span class="file">MNM.py</span>      <span class="note">← Método de Newton Modificado</span><br>
+│   ├── <span class="file">stl_utils.py</span>  <span class="note">← carga/validación/geometría STL</span><br>
+│   ├── <span class="file">export.py</span>     <span class="note">← JSON, HTML de resultados</span><br>
+│   └── <span class="file">generate_3d_report.py</span>  <span class="note">← HTML interactivo 3D</span><br>
+├── <span class="dir">data/</span><br>
+│   ├── <span class="dir">Capsula/</span>     <span class="note">← mallas STL de la ARD (distintas densidades)</span><br>
+│   └── <span class="dir">esfera/</span>      <span class="note">← esfera de validación</span><br>
+├── <span class="dir">results/</span><br>
+│   ├── results.json<br>
+│   ├── report.html<br>
+│   ├── report_3d.html<br>
+│   ├── <span class="dir">csv/</span>         <span class="note">← una subcarpeta por cápsula</span><br>
+│   └── <span class="dir">Plots/</span>       <span class="note">← una subcarpeta por cápsula + globales</span><br>
+├── <span class="dir">Matlab/</span>          <span class="note">← datos de validación MATLAB (variables_esfera1.csv)</span><br>
+├── <span class="dir">Documentation/</span><br>
+│   └── <span class="file">Documentation.html</span>  <span class="note">← este archivo</span><br>
+└── README.md
+    </div>
+
+    <h3>Mallas STL disponibles</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Archivo</th><th>Nombre clave</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>ARD_coarsest.stl</code></td><td>coarsest</td><td>Malla más gruesa</td></tr>
+          <tr><td><code>ARD_coarse.stl</code></td><td>coarse</td><td>Malla gruesa</td></tr>
+          <tr><td><code>ARD_fine.stl</code></td><td>fine</td><td>Malla de referencia (análisis principal)</td></tr>
+          <tr><td><code>ARD_finer.stl</code></td><td>finer</td><td>Malla refinada</td></tr>
+          <tr><td><code>ARD_finest.stl</code></td><td>finest</td><td>Malla más fina</td></tr>
+          <tr><td><code>esfera1.stl</code></td><td>sphere</td><td>Esfera de validación</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s3">
+    <h2 class="sec" data-n="3">Cómo ejecutar</h2>
+    <pre><code># Desde la raíz del repositorio:
+python src/main.py
+
+# Alternativa:
+python run.py</code></pre>
+
+    <h3>Dependencias</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Paquete</th><th>Versión mínima</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td>Python</td><td>3.11</td><td>Intérprete base</td></tr>
+          <tr><td>numpy</td><td>≥ 1.26</td><td>Álgebra vectorial y matricial</td></tr>
+          <tr><td>matplotlib</td><td>≥ 3.10</td><td>Gráficas 2D y 3D</td></tr>
+          <tr><td>trimesh</td><td>≥ 4.11</td><td>Carga y procesado de STL</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><code>pip install numpy matplotlib trimesh</code></pre>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s4">
+    <h2 class="sec" data-n="4">Configuración (<code>main.py</code>)</h2>
+    <p>
+      Toda la configuración del pipeline vive en el diccionario <code>config</code> de
+      <code>src/main.py</code>. La tabla siguiente describe cada parámetro:
+    </p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Clave</th><th>Tipo</th><th>Por defecto</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>CAPSULES</code></td><td>list[Path]</td><td><code>[ARD_fine.stl]</code></td>
+              <td>Lista de STLs a analizar. Cada uno genera su subcarpeta de salida.</td></tr>
+          <tr><td><code>STL_SPHERE</code></td><td>Path</td><td><code>esfera1.stl</code></td>
+              <td>Geometría de la esfera de validación.</td></tr>
+          <tr><td><code>ALPHAS_DEG</code></td><td>list[float]</td><td>[-30…30]</td>
+              <td>Ángulos de ataque del barrido en alpha.</td></tr>
+          <tr><td><code>MACH</code></td><td>float</td><td>8.0</td>
+              <td>Mach para el barrido en alpha (MNM).</td></tr>
+          <tr><td><code>MACH_SWEEP</code></td><td>list[float]</td><td>[1,2,4,8,12,15,20]</td>
+              <td>Lista de Machs para el barrido en Mach a α=0.</td></tr>
+          <tr><td><code>GAMMA</code></td><td>float</td><td>1.4</td>
+              <td>Ratio de calores específicos del fluido.</td></tr>
+          <tr><td><code>CP_MAP_ALPHA</code></td><td>float</td><td>20.0</td>
+              <td>Ángulo de ataque para el mapa de Cp 3D.</td></tr>
+          <tr><td><code>CP_MAP_METHOD</code></td><td>str</td><td>"MNM"</td>
+              <td>"MN" o "MNM".</td></tr>
+          <tr><td><code>RUN_MN_SWEEP</code></td><td>bool</td><td>True</td>
+              <td>Ejecutar barrido MN en alpha → results_mn.csv</td></tr>
+          <tr><td><code>RUN_MNM_SWEEP</code></td><td>bool</td><td>True</td>
+              <td>Ejecutar barrido MNM en alpha → results_mnm_M8.csv</td></tr>
+          <tr><td><code>RUN_MACH_SWEEP</code></td><td>bool</td><td>True</td>
+              <td>Barrido Mach (MNM, α=0) → results_mnm_mach_sweep.csv</td></tr>
+          <tr><td><code>RUN_MESH_SENSITIVITY</code></td><td>bool</td><td>True</td>
+              <td>Comparativa de mallas → results_mesh_sensitivity.csv</td></tr>
+          <tr><td><code>MESH_STLS</code></td><td>list[Path]</td><td>5 mallas ARD</td>
+              <td>STLs usados en el análisis de sensibilidad de malla.</td></tr>
+          <tr><td><code>MESH_ALPHA</code></td><td>float</td><td>10.0</td>
+              <td>Alpha de referencia para la sensibilidad de malla.</td></tr>
+          <tr><td><code>MESH_MACH</code></td><td>float</td><td>8.0</td>
+              <td>Mach de referencia para la sensibilidad de malla.</td></tr>
+          <tr><td><code>RUN_SPHERE_MACH_SWEEP</code></td><td>bool</td><td>True</td>
+              <td>Sweep Mach MNM para la esfera (validación).</td></tr>
+          <tr><td><code>SPHERE_MACH_SWEEP</code></td><td>list[float]</td><td>[2…20]</td>
+              <td>Lista de Machs para el sweep de la esfera.</td></tr>
+          <tr><td><code>RUN_MESH_ALPHA_SWEEP</code></td><td>bool</td><td>True</td>
+              <td>Sweeps alpha para malla gruesa y fina (gráficas comparativas).</td></tr>
+          <tr><td><code>RUN_WINDWARD_PLOTS</code></td><td>bool</td><td>True</td>
+              <td>Gráficas barlovento/sotavento + CD vs α multi-Mach.</td></tr>
+          <tr><td><code>RUN_VALIDATION</code></td><td>bool</td><td>True</td>
+              <td>Validación esfera vs datos MATLAB.</td></tr>
+          <tr><td><code>VALIDATION_CSV</code></td><td>Path</td><td>Matlab/variables_esfera1.csv</td>
+              <td>Datos de referencia MATLAB para la validación.</td></tr>
+          <tr><td><code>VALIDATION_MACH_LIST</code></td><td>list</td><td>[2,4,6,8,10,15,20]</td>
+              <td>Machs a incluir en el gráfico de validación.</td></tr>
+          <tr><td><code>RUN_CP_DISTRIBUTION</code></td><td>bool</td><td>True</td>
+              <td>Genera las 4 gráficas de distribución de Cp.</td></tr>
+          <tr><td><code>CP_DIST_MACH</code></td><td>float</td><td>1.0</td>
+              <td>Mach para las gráficas de distribución de Cp.</td></tr>
+          <tr><td><code>ALPHA_TRIM_DEG</code></td><td>float | None</td><td>-21.0</td>
+              <td>Alpha de trim a calcular; None = no calcular.</td></tr>
+          <tr><td><code>ALPHA_TRIM_METHOD</code></td><td>str</td><td>"MNM"</td>
+              <td>"MN" o "MNM".</td></tr>
+          <tr><td><code>SHOW_GEOMETRY</code></td><td>bool</td><td>True</td>
+              <td>Mostrar visualización 3D de la geometría al arrancar.</td></tr>
+          <tr><td><code>GROUP_ID</code></td><td>str</td><td>"G5 - ARD"</td>
+              <td>Identificador del grupo (aparece en el informe HTML).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s5">
+    <h2 class="sec" data-n="5">Convenciones de coordenadas y signos</h2>
+
+    <h3>Ejes del cuerpo</h3>
+    <div class="axes-diagram">
+      <div class="axes-box">
+        x → lateral (envergadura)<br>
+        y → axial, apunta hacia la <strong>popa</strong><br>
+        z → ascendente (normal al plano de simetría)
+      </div>
+      <div class="axes-box">
+        Escudo térmico en <strong>–y</strong><br>
+        Base / popa en <strong>+y</strong><br>
+        Flujo entrante en <strong>+y</strong> a α = 0
+      </div>
+    </div>
+
+    <h3>Ángulo de ataque α</h3>
+    <ul>
+      <li><strong>α = 0°</strong> — flujo frontal sobre el escudo térmico.</li>
+      <li><strong>α &gt; 0°</strong> — flujo inclinado hacia +z (morro sube).</li>
+      <li><strong>α &lt; 0°</strong> — flujo inclinado hacia –z (morro baja).</li>
+    </ul>
+
+    <h3>Dirección del flujo incidente</h3>
+    <div class="math">
+V̂<sub>∞</sub>(α) = [0,  cos α,  sin α]
+    </div>
+    <p>A α = 0, <em>V̂<sub>∞</sub> = [0, +1, 0]</em> (flujo en +y).</p>
+
+    <h3>Ejes viento</h3>
+    <div class="math">
+ê<sub>D</sub> = [0,  +cos α,  +sin α]   ← dirección de arrastre (paralela a V̂<sub>∞</sub>)
+ê<sub>M</sub> = [1,  0,       0      ]   ← eje de momento (cabeceo, +x)
+ê<sub>L</sub> = ê<sub>M</sub> × ê<sub>D</sub>               ← dirección de sustentación
+    </div>
+    <div class="callout info">
+      <strong>Nota de implementación:</strong> los ejes viento a α = 0 se obtienen con
+      <code>wind_axes(0.0)</code>, que devuelve <code>eD = [0, +1, 0]</code>.
+      Hardcodear <code>eD = [0, −1, 0]</code> (convención +y vieja) invertiría el signo de CD.
+    </div>
+
+    <h3>Signos de los coeficientes</h3>
+    <ul>
+      <li><strong>C<sub>D</sub> &gt; 0</strong> — fuerza oponiéndose al avance (hacia adelante del flujo).</li>
+      <li><strong>C<sub>L</sub> &gt; 0</strong> con α &gt; 0 — fuerza hacia +z (levantamiento).</li>
+      <li><strong>C<sub>M</sub> &gt; 0</strong> en +x — cabeceo positivo.</li>
+    </ul>
+
+    <h3>Coeficiente de presión por cara</h3>
+    <div class="math">
+μ<sub>i</sub> = n̂<sub>i</sub> · (−V̂<sub>∞</sub>)          ← coseno local de incidencia
+
+C<sub>p,i</sub> = 0            si μ<sub>i</sub> ≤ 0  (sotavento)
+C<sub>p,i</sub> = f(μ<sub>i</sub>)      si μ<sub>i</sub> &gt; 0  (barlovento)
+    </div>
+
+    <h3>Coeficiente de fuerza por cara</h3>
+    <div class="math">
+C⃗<sub>F,i</sub> = −(C<sub>p,i</sub> · A<sub>i</sub> / S<sub>ref</sub>) · n̂<sub>i</sub>
+    </div>
+    <p>
+      El signo negativo expresa que la presión actúa hacia el <em>interior</em> del cuerpo
+      (en sentido opuesto a la normal exterior).
+    </p>
+
+    <h3>Coeficiente de momento por cara</h3>
+    <div class="math">
+C⃗<sub>M,i</sub> = (r⃗<sub>i</sub> − r⃗<sub>ref</sub>) × C⃗<sub>F,i</sub> · S<sub>ref</sub> / (S<sub>ref</sub> · L<sub>ref</sub>)
+    </div>
+
+    <h3>Longitudes de referencia</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Geometría</th><th>S<sub>ref</sub></th><th>L<sub>ref</sub></th><th>r<sub>ref</sub></th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Cápsula</td>
+            <td>Ext<sub>x</sub> × Ext<sub>z</sub> (sección frontal XZ)</td>
+            <td>Ext<sub>y</sub> (longitud axial)</td>
+            <td>Centroide geométrico ponderado por área</td>
+          </tr>
+          <tr>
+            <td>Esfera</td>
+            <td>π R²</td>
+            <td>2R</td>
+            <td>Origen (0, 0, 0)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      El radio de la esfera se obtiene como <code>R = sqrt(A_total / 4π)</code>,
+      donde <code>A_total</code> es la suma de áreas de todos los triángulos.
+    </p>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s6">
+    <h2 class="sec" data-n="6">Fundamento matemático</h2>
+
+    <h3>Método de Newton (MN)</h3>
+    <p>
+      Aproximación de alta velocidad. El coeficiente de presión en una cara de barlovento es
+      proporcional al cuadrado del seno del ángulo de incidencia local:
+    </p>
+    <div class="math">
+C<sub>p</sub> = 2 μ²   (μ = n̂ · (−V̂<sub>∞</sub>),  μ &gt; 0)
+C<sub>p</sub> = 0       (μ ≤ 0, sotavento)
+    </div>
+    <p>
+      En el límite M → ∞ con γ → 1, C<sub>p,max</sub> = 2. El método MN no depende del
+      número de Mach — es puramente geométrico.
+    </p>
+
+    <h3>Método de Newton Modificado (MNM)</h3>
+    <p>
+      Escala el coeficiente de Newton con el C<sub>p,max</sub> real de punto de
+      estancamiento detrás de una onda de choque normal, calculado mediante las
+      relaciones de choque de Rankine-Hugoniot y la fórmula de presión total:
+    </p>
+    <div class="math">
+C<sub>p,max</sub> = (2 / (γ M²)) · (p<sub>02</sub>/p<sub>∞</sub> − 1)
+    </div>
+    <p>donde la relación de presiones totales:</p>
+    <div class="math">
+p<sub>02</sub>/p<sub>∞</sub> = [(p<sub>2</sub>/p<sub>1</sub>) · (p<sub>02</sub>/p<sub>2</sub>)]
+            = [ (2γM² − (γ−1))/(γ+1) ] · [ 1 + (γ−1)/2 · M₂² ]^(γ/(γ−1))
+    </div>
+    <p>
+      La distribución de Cp sigue la misma forma geométrica que el MN, pero escalada:
+    </p>
+    <div class="math">
+C<sub>p</sub> = C<sub>p,max</sub> · μ²   (μ &gt; 0)
+C<sub>p</sub> = 0                  (μ ≤ 0)
+    </div>
+    <p>
+      Para una esfera perfecta, la distribución teórica sobre el ángulo φ desde el
+      punto de estancamiento es exactamente <em>C<sub>p,max</sub> · cos²(φ)</em>,
+      dado que cos(φ) = μ por definición de φ.
+    </p>
+
+    <h3>Ángulo φ para las gráficas de distribución de Cp</h3>
+    <p>
+      El ángulo φ se define como el ángulo polar desde la dirección de estancamiento,
+      con signo tomado del componente z de la normal:
+    </p>
+    <div class="math">
+μ<sub>i</sub>  = clip(−n<sub>y,i</sub>,  −1, 1)          ← cos del ángulo de incidencia (α = 0)
+φ<sub>i</sub>  = sign(n<sub>z,i</sub>) · arccos(μ<sub>i</sub>)   ← en [−180°, +180°]
+    </div>
+    <p>
+      Esta definición garantiza que <strong>cos(φ<sub>i</sub>) = μ<sub>i</sub></strong> exactamente,
+      de forma que los puntos de la esfera caen sobre la curva teórica C<sub>p,max</sub>·cos²φ.
+      La cápsula, al tener geometría no esférica (escudo plano, hombro cónico, base),
+      no sigue esa curva — esa desviación es precisamente la información de interés.
+    </p>
+    <div class="callout">
+      <strong>Nota:</strong> proyectar la normal al plano y-z antes de tomar el ángulo
+      [<code>arctan2(n_z, −n_y)</code>] introduce error para caras con n<sub>x</sub> ≠ 0
+      porque cos(φ_proyectado) ≠ μ. Por eso se usa la definición basada en arccos(μ).
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s7">
+    <h2 class="sec" data-n="7">Módulos del código</h2>
+
+    <h3>MN.py — Método de Newton puro</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Función</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>flow_direction_from_alpha(alpha_deg)</code></td>
+              <td>Devuelve V̂<sub>∞</sub> normalizado para el alpha dado.</td></tr>
+          <tr><td><code>compute_mu(normals, Vinf_hat)</code></td>
+              <td>μ<sub>i</sub> = n̂<sub>i</sub> · (−V̂<sub>∞</sub>) para cada cara.</td></tr>
+          <tr><td><code>compute_cp_newton(mu)</code></td>
+              <td>C<sub>p</sub> = 2μ² (barlovento) / 0 (sotavento).</td></tr>
+          <tr><td><code>compute_force_coeff_faces(cp, areas, normals, S_ref)</code></td>
+              <td>C⃗<sub>F,i</sub> = −(C<sub>p,i</sub>·A<sub>i</sub>/S<sub>ref</sub>)·n̂<sub>i</sub></td></tr>
+          <tr><td><code>compute_moment_coeff_faces(...)</code></td>
+              <td>C⃗<sub>M,i</sub> = (r⃗<sub>i</sub>−r⃗<sub>ref</sub>) × C⃗<sub>F,i</sub>·S<sub>ref</sub>/(S<sub>ref</sub>·L<sub>ref</sub>)</td></tr>
+          <tr><td><code>project_global_coefficients(CF_total, CM_total, eD, eL, eM)</code></td>
+              <td>Proyecta sobre ejes viento → CD, CL, CM.</td></tr>
+          <tr><td><code>solve_newton_case(...)</code></td>
+              <td>Resuelve un caso completo MN; devuelve dict con CD, CL, CM, cp, CF_faces, …</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>MNM.py — Método de Newton Modificado</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Función</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>compute_cpmax_modified_newton(Mach, gamma)</code></td>
+              <td>Calcula C<sub>p,max</sub> via relaciones de choque y presión total.</td></tr>
+          <tr><td><code>compute_cp_modified_newton(mu, Mach, gamma)</code></td>
+              <td>C<sub>p</sub> = C<sub>p,max</sub>·μ² (barlovento) / 0 (sotavento). Devuelve (cp, cp_max).</td></tr>
+          <tr><td><code>solve_modified_newton_case(...)</code></td>
+              <td>Resuelve un caso completo MNM; incluye <code>cp_max</code> en el dict de salida.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>stl_utils.py — Geometría STL</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Función</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>load_stl(filepath)</code></td>
+              <td>Carga el STL y valida que sea una malla triangular válida.</td></tr>
+          <tr><td><code>compute_face_geometry(mesh)</code></td>
+              <td>Devuelve dict con <code>centers</code>, <code>areas</code>, <code>normals</code>, <code>face_vertices</code>.</td></tr>
+          <tr><td><code>validate_mesh(mesh)</code></td>
+              <td>Diagnóstico: watertight, winding, caras degeneradas, área, volumen.</td></tr>
+          <tr><td><code>plot_geom(geom, ...)</code></td>
+              <td>Visualización 3D matplotlib de la malla (centroides, normales, color por área).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>runner.py — Pipeline</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Función / bloque</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>get_capsule_refs(mesh, geom)</code></td>
+              <td>Calcula S_ref, L_ref y r_ref para una cápsula.</td></tr>
+          <tr><td><code>get_sphere_refs(geom)</code></td>
+              <td>Calcula S_ref, L_ref, r_ref y R para una esfera.</td></tr>
+          <tr><td><code>wind_axes(alpha_deg)</code></td>
+              <td>Devuelve (eD, eL, eM) en ejes viento para el alpha dado.</td></tr>
+          <tr><td><code>run_mn_sweep(...)</code></td>
+              <td>Barrido MN sobre lista de alphas; devuelve filas CSV.</td></tr>
+          <tr><td><code>run_mnm_sweep(...)</code></td>
+              <td>Barrido MNM sobre lista de alphas y un Mach; devuelve filas CSV.</td></tr>
+          <tr><td><code>run_mach_sweep(...)</code></td>
+              <td>Barrido MNM sobre lista de Machs a alpha fijo; devuelve filas CSV.</td></tr>
+          <tr><td><code>generate_plots(...)</code></td>
+              <td>Produce las 12 gráficas principales de coeficientes.</td></tr>
+          <tr><td><code>generate_windward_plots(...)</code></td>
+              <td>Produce gráficas de barlovento/sotavento y CD multi-Mach.</td></tr>
+          <tr><td><code>generate_cp_distribution_plots(...)</code></td>
+              <td>Produce las 4 gráficas de distribución de Cp (esfera y cápsula × MN/MNM).</td></tr>
+          <tr><td><code>run_pipeline(config, ...)</code></td>
+              <td>Punto de entrada principal; orquesta el análisis completo.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s8">
+    <h2 class="sec" data-n="8">Pipeline de ejecución</h2>
+    <p>El orden interno de <code>run_pipeline</code> es el siguiente:</p>
+    <ol>
+      <li><strong>Carga de geometría de la esfera</strong> — STL, geometría de caras, referencias (S_ref, L_ref, R).</li>
+      <li><strong>Sweep esfera</strong> — sweep Mach MNM para la esfera (validación).</li>
+      <li><strong>Validación vs MATLAB</strong> — comparación de C<sub>D</sub> con datos de referencia.</li>
+      <li><strong>Bucle sobre cápsulas</strong> — para cada STL en <code>CAPSULES</code>:
+        <ol type="a">
+          <li>Carga de geometría y referencias.</li>
+          <li>Sweeps MN y MNM en alpha.</li>
+          <li>Sweep Mach MNM a α = 0.</li>
+          <li>Guardado de CSVs en <code>csv/{nombre_stl}/</code>.</li>
+          <li>Gráficas de coeficientes en <code>Plots/{nombre_stl}/</code>.</li>
+          <li>Gráficas de barlovento/sotavento y multi-Mach.</li>
+          <li>Mapa de Cp 3D.</li>
+        </ol>
+      </li>
+      <li><strong>Sensibilidad de malla</strong> — corre MN para cada malla en <code>MESH_STLS</code>, genera CSV y gráficas comparativas.</li>
+      <li><strong>Distribución de Cp</strong> — 4 gráficas de Cp vs φ (esfera y cápsula × MN/MNM) a α=0.</li>
+      <li><strong>Ensamblado de casos</strong> — construye <code>results.json</code> con los 9 casos del informe.</li>
+      <li><strong>Exportación HTML</strong> — <code>report.html</code> (tabla) y <code>report_3d.html</code> (visor 3D interactivo).</li>
+    </ol>
+    <div class="callout info">
+      La primera cápsula de la lista <code>CAPSULES</code> actúa como <strong>cápsula principal</strong>:
+      sus resultados alimentan los casos del informe, el mapa de Cp 3D y el visor HTML.
+      Las cápsulas adicionales generan sus propias salidas de forma independiente.
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s9">
+    <h2 class="sec" data-n="9">Salidas generadas</h2>
+
+    <h3>CSVs — <code>results/csv/{nombre}/</code></h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Archivo</th><th>Contenido</th></tr></thead>
+        <tbody>
+          <tr><td><code>results_mn.csv</code></td>
+              <td>Barrido MN en alpha: alpha, CD, CL, CM, CF_total, CM_total, n_windward, cp_min/max.</td></tr>
+          <tr><td><code>results_mnm_M{Mach}.csv</code></td>
+              <td>Barrido MNM en alpha a Mach fijo: ídem + Mach, gamma, cp_max_stagnation.</td></tr>
+          <tr><td><code>results_mnm_mach_sweep.csv</code></td>
+              <td>Barrido Mach MNM a alpha fijo: Mach, alpha, CD, CL, CM, …</td></tr>
+          <tr><td><code>results_mesh_sensitivity.csv</code></td>
+              <td>CD por malla: nombre, n_faces, CD_MN, CD_MNM.</td></tr>
+          <tr><td><code>cp_capsule_MN_a{alpha}_M{Mach}.csv</code></td>
+              <td>Cp por cara: x_center, y_center, z_center, cp.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>JSON — <code>results/results.json</code></h3>
+    <p>
+      Contiene los 9 casos del informe con CD, CL, CM, CF_total y CM_total.
+      Ver sección 10 para la lista de casos.
+    </p>
+
+    <h3>HTML — <code>results/</code></h3>
+    <ul>
+      <li><code>report.html</code> — tabla resumen de todos los casos.</li>
+      <li><code>report_3d.html</code> — visor 3D interactivo con mapa de Cp coloreado.</li>
+    </ul>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s10">
+    <h2 class="sec" data-n="10">Casos del informe</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>case_id</th><th>Geometría</th><th>Método</th><th>α (°)</th><th>M∞</th></tr></thead>
+        <tbody>
+          <tr><td><code>sphere_MN_a0_M8</code></td><td>Esfera</td><td>MN</td><td>0</td><td>8</td></tr>
+          <tr><td><code>sphere_MNM_a0_M2</code></td><td>Esfera</td><td>MNM</td><td>0</td><td>2</td></tr>
+          <tr><td><code>sphere_MNM_a0_M8</code></td><td>Esfera</td><td>MNM</td><td>0</td><td>8</td></tr>
+          <tr><td><code>capsule_MN_a0_M8</code></td><td>ARD fine</td><td>MN</td><td>0</td><td>8</td></tr>
+          <tr><td><code>capsule_MNM_a0_M8</code></td><td>ARD fine</td><td>MNM</td><td>0</td><td>8</td></tr>
+          <tr><td><code>capsule_MNM_a10_M8</code></td><td>ARD fine</td><td>MNM</td><td>10</td><td>8</td></tr>
+          <tr><td><code>capsule_MNM_a20_M8</code></td><td>ARD fine</td><td>MNM</td><td>20</td><td>8</td></tr>
+          <tr><td><code>capsule_MN_mesh_coarse_a10_M8</code></td><td>ARD coarse</td><td>MN</td><td>10</td><td>8</td></tr>
+          <tr><td><code>capsule_MN_mesh_fine_a10_M8</code></td><td>ARD fine</td><td>MN</td><td>10</td><td>8</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s11">
+    <h2 class="sec" data-n="11">Gráficas producidas</h2>
+
+    <h3>Gráficas globales — <code>results/Plots/</code></h3>
+    <div class="plots-grid">
+      <div class="plot-card">
+        <div class="fname">01_esfera_CD_vs_Mach.png</div>
+        <div class="desc">CD de la esfera MNM vs Mach.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">02_esfera_CD_vs_alpha_M8.png</div>
+        <div class="desc">CD esfera MN y MNM vs α, M=8.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">03_esfera_CL_vs_alpha_M8.png</div>
+        <div class="desc">CL esfera vs α, M=8.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">04_cpmax_CD_MNM_vs_Mach.png</div>
+        <div class="desc">Cp_max y CD (MNM) de la esfera vs Mach.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">05_capsula_CD_vs_alpha_M8.png</div>
+        <div class="desc">CD cápsula MN y MNM vs α, M=8.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">06_capsula_CL_vs_alpha_M8.png</div>
+        <div class="desc">CL cápsula vs α, M=8.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">07_capsula_CM_vs_alpha_M8.png</div>
+        <div class="desc">CM cápsula vs α, M=8.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">08_capsula_LD_vs_alpha_M8.png</div>
+        <div class="desc">L/D cápsula vs α, M=8.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">09_capsula_CD_vs_Mach_alpha0.png</div>
+        <div class="desc">CD cápsula MNM vs Mach a α=0.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">10_capsula_CD_vs_alpha_multiMach_MNM.png</div>
+        <div class="desc">CD MNM vs α para varios Machs.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">11_sensibilidad_malla_CD.png</div>
+        <div class="desc">CD vs número de caras (5 mallas).</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">12_sensibilidad_malla_error_relativo.png</div>
+        <div class="desc">Error relativo de CD vs malla más fina.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">capsule_MN_vs_alpha.png</div>
+        <div class="desc">CD, CL, CM cápsula MN vs α.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">capsule_MNM_vs_alpha.png</div>
+        <div class="desc">CD, CL, CM cápsula MNM vs α.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">capsule_coefficients_vs_alpha.png</div>
+        <div class="desc">CD, CL, CM comparado MN vs MNM.</div>
+      </div>
+    </div>
+
+    <h3>Distribución de Cp — <code>Plots/Cp_Distribution/</code></h3>
+    <div class="plots-grid">
+      <div class="plot-card">
+        <div class="fname">cp_dist_capsule_mn.png</div>
+        <div class="desc">Cp vs φ, cápsula ARD, MN, α=0.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">cp_dist_capsule_mnm.png</div>
+        <div class="desc">Cp vs φ, cápsula ARD, MNM, α=0.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">cp_dist_sphere_mn.png</div>
+        <div class="desc">Cp vs φ, esfera, MN, α=0. Puntos sobre curva cos².</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">cp_dist_sphere_mnm.png</div>
+        <div class="desc">Cp vs φ, esfera, MNM, α=0. Puntos sobre curva Cp_max·cos².</div>
+      </div>
+    </div>
+
+    <h3>Validación — <code>Plots/Validacion/</code></h3>
+    <div class="plots-grid">
+      <div class="plot-card">
+        <div class="fname">validation_sphere_CD_vs_Mach.png</div>
+        <div class="desc">CD esfera: MN, MNM y datos MATLAB vs Mach.</div>
+      </div>
+    </div>
+
+    <h3>Barlovento/Sotavento — <code>Plots/{capsule}/MNM_y_Barlovento/</code></h3>
+    <div class="plots-grid">
+      <div class="plot-card">
+        <div class="fname">cp_barlovento_sotavento.png</div>
+        <div class="desc">Cp de cada cara (barlovento / sotavento) a α=20°, MN y MNM.</div>
+      </div>
+      <div class="plot-card">
+        <div class="fname">CD_vs_alpha_multiMach.png</div>
+        <div class="desc">CD vs α: curva MN + curvas MNM a varios Mach.</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="s12">
+    <h2 class="sec" data-n="12">Añadir una cápsula nueva</h2>
+    <p>
+      El pipeline está diseñado para ser completamente reproducible con nuevas geometrías.
+      Los pasos son los siguientes:
+    </p>
+    <ol>
+      <li>Colocar el archivo <code>.stl</code> en cualquier ruta accesible (por ejemplo
+          <code>data/Capsula_2/nueva.stl</code>).</li>
+      <li>Abrir <code>src/main.py</code> y añadir la ruta a la lista <code>CAPSULES</code>:</li>
+    </ol>
+    <pre><code>"CAPSULES": [
+    DATA_DIR / "Capsula"   / "ARD_fine.stl",
+    DATA_DIR / "Capsula_2" / "nueva.stl",    # ← nueva cápsula
+],</code></pre>
+    <ol start="3">
+      <li>Ejecutar <code>python src/main.py</code>.</li>
+    </ol>
+    <p>
+      El pipeline generará automáticamente:
+    </p>
+    <ul>
+      <li><code>results/csv/nueva/</code> con todos los CSVs de sweeps.</li>
+      <li><code>results/Plots/nueva/</code> con todas las gráficas de coeficientes.</li>
+    </ul>
+    <div class="callout info">
+      La primera cápsula de la lista sigue siendo la "cápsula principal" que alimenta el
+      informe HTML y <code>results.json</code>. El resto se analiza independientemente
+      sin afectar esos archivos de resumen.
+    </div>
+
+    <h3>Requisitos de la malla STL</h3>
+    <ul>
+      <li>Malla triangular cerrada (preferentemente <em>watertight</em>).</li>
+      <li>Normales exteriores coherentes (winding consistente).</li>
+      <li>Escudo térmico orientado hacia <strong>–y</strong> (el flujo llega en +y a α=0).</li>
+      <li>Unidades: milímetros (igual que la ARD de referencia).</li>
+    </ul>
+  </section>
+
+</div><!-- /wrapper -->
+
+<div class="wrapper">
+  <footer>
+    Generado para Trabajo 1 — Grupo G5 · ARD &nbsp;|&nbsp;
+    Pablo Castillo Jiménez · Alberto García Díaz · Ana Jorba Vera &nbsp;|&nbsp;
+    21 marzo 2026
+  </footer>
+</div>
+
+</body>
+</html>

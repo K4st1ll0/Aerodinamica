@@ -34,10 +34,10 @@ config = {
     # Para analizar más cápsulas, añade rutas a la lista — cada una genera
     # sus propios CSVs y plots en csv/{nombre}/ y Plots/{nombre}/.
     "CAPSULES": [
-        DATA_DIR / "Capsula" / "ARD_chillfine.stl",
+        DATA_DIR / "Capsula" / "ARD_fine.stl",
         # DATA_DIR / "Capsula_2" / "nueva_capsula.stl",   # ← descomentar para añadir
     ],
-    "STL_SPHERE":  DATA_DIR / "esfera"  / "esfera.stl",
+    "STL_SPHERE":  DATA_DIR / "esfera"  / "esfera1.stl",
 
     # ── Condiciones de flujo ────────────────────────────────────────────────
     "ALPHAS_DEG": [-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0],        # barrido en alpha (para sweeps)
@@ -66,9 +66,9 @@ config = {
     "MESH_STLS": [
         DATA_DIR / "Capsula" / "ARD_coarsest.stl",
         DATA_DIR / "Capsula" / "ARD_coarse.stl",
+        DATA_DIR / "Capsula" / "ARD_finer.stl",
         DATA_DIR / "Capsula" / "ARD_fine.stl",
-        DATA_DIR / "Capsula" / "ARD_chillfine.stl",
-        DATA_DIR / "Capsula" / "ARD_ultrafine.stl",
+        DATA_DIR / "Capsula" / "ARD_finest.stl",
     ],
 
     # ── Visualización geométrica al arrancar ────────────────────────────────
@@ -82,6 +82,10 @@ config = {
     "STL_VALIDATION_SPHERE": DATA_DIR / "esfera" / "esfera1.stl",
     "VALIDATION_CSV":        ROOT / "Matlab" / "variables_esfera1.csv",
     "VALIDATION_MACH_LIST":  [2, 4, 6, 8, 10, 15, 20],
+
+    # ── Distribución Cp vs ángulo ───────────────────────────────────────────
+    "RUN_CP_DISTRIBUTION": True,
+    "CP_DIST_MACH":        1.0,    # Mach para el plot MNM (MN es independiente)
 
     # ── Alpha trim ───────────────────────────────
     "ALPHA_TRIM_DEG":    -21.0,   # None = no calcular

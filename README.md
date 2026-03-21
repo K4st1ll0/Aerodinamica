@@ -63,10 +63,10 @@ Eje de momento: `eM = [1, 0, 0]`.
 | `sphere_MN_a0_M8` | Esfera | MN | 0 | 8 |
 | `sphere_MNM_a0_M2` | Esfera | MNM | 0 | 2 |
 | `sphere_MNM_a0_M8` | Esfera | MNM | 0 | 8 |
-| `capsule_MN_a0_M8` | ARD chillfine | MN | 0 | 8 |
-| `capsule_MNM_a0_M8` | ARD chillfine | MNM | 0 | 8 |
-| `capsule_MNM_a10_M8` | ARD chillfine | MNM | 10 | 8 |
-| `capsule_MNM_a20_M8` | ARD chillfine | MNM | 20 | 8 |
+| `capsule_MN_a0_M8` | ARD fine | MN | 0 | 8 |
+| `capsule_MNM_a0_M8` | ARD fine | MNM | 0 | 8 |
+| `capsule_MNM_a10_M8` | ARD fine | MNM | 10 | 8 |
+| `capsule_MNM_a20_M8` | ARD fine | MNM | 20 | 8 |
 | `capsule_MN_mesh_coarse_a10_M8` | ARD coarse | MN | 10 | 8 |
 | `capsule_MN_mesh_fine_a10_M8` | ARD fine | MN | 10 | 8 |
 

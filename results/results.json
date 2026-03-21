@@ -46,21 +46,21 @@
     {
       "case_id": "sphere_MN_a0_M8",
       "geometry_name": "sphere",
-      "stl_file": "data/esfera/esfera.stl",
-      "triangles": 528,
+      "stl_file": "data/esfera/esfera1.stl",
+      "triangles": 24648,
       "model": "MN",
       "Mach": 8.0,
       "alpha_deg": 0.0,
-      "CD": 1.00281549,
+      "CD": 1.00006582,
       "CL": -0.0,
-      "CM": 0.0,
+      "CM": -0.0,
       "force_coeff_body": [
         -0.0,
-        1.00281549,
+        1.00006582,
         -0.0
       ],
       "moment_coeff_body": [
-        0.0,
+        -0.0,
         -0.0,
         -0.0
       ]
@@ -68,21 +68,21 @@
     {
       "case_id": "sphere_MNM_a0_M2",
       "geometry_name": "sphere",
-      "stl_file": "data/esfera/esfera.stl",
-      "triangles": 528,
+      "stl_file": "data/esfera/esfera1.stl",
+      "triangles": 24648,
       "model": "MNM",
       "Mach": 2.0,
       "alpha_deg": 0.0,
-      "CD": 0.8309832,
-      "CL": -0.0,
-      "CM": 0.0,
+      "CD": 0.82870469,
+      "CL": 0.0,
+      "CM": -0.0,
       "force_coeff_body": [
         -0.0,
-        0.8309832,
-        -0.0
+        0.82870469,
+        0.0
       ],
       "moment_coeff_body": [
-        0.0,
+        -0.0,
         -0.0,
         -0.0
       ]
@@ -90,17 +90,17 @@
     {
       "case_id": "sphere_MNM_a0_M8",
       "geometry_name": "sphere",
-      "stl_file": "data/esfera/esfera.stl",
-      "triangles": 528,
+      "stl_file": "data/esfera/esfera1.stl",
+      "triangles": 24648,
       "model": "MNM",
       "Mach": 8.0,
       "alpha_deg": 0.0,
-      "CD": 0.91624955,
+      "CD": 0.91373724,
       "CL": -0.0,
       "CM": -0.0,
       "force_coeff_body": [
         -0.0,
-        0.91624955,
+        0.91373724,
         -0.0
       ],
       "moment_coeff_body": [
@@ -112,7 +112,7 @@
     {
       "case_id": "capsule_MN_a0_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "stl_file": "data/Capsula/ARD_fine.stl",
       "triangles": 9788,
       "model": "MN",
       "Mach": 8.0,
@@ -134,7 +134,7 @@
     {
       "case_id": "capsule_MNM_a0_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "stl_file": "data/Capsula/ARD_fine.stl",
       "triangles": 9788,
       "model": "MNM",
       "Mach": 8.0,
@@ -156,7 +156,7 @@
     {
       "case_id": "capsule_MNM_a10_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "stl_file": "data/Capsula/ARD_fine.stl",
       "triangles": 9788,
       "model": "MNM",
       "Mach": 8.0,
@@ -178,7 +178,7 @@
     {
       "case_id": "capsule_MNM_a20_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "stl_file": "data/Capsula/ARD_fine.stl",
       "triangles": 9788,
       "model": "MNM",
       "Mach": 8.0,
@@ -200,7 +200,7 @@
     {
       "case_id": "capsule_MN_mesh_coarse_a10_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "stl_file": "data/Capsula/ARD_fine.stl",
       "triangles": 9788,
       "model": "MN",
       "Mach": 8.0,
@@ -222,7 +222,7 @@
     {
       "case_id": "capsule_MN_mesh_fine_a10_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "stl_file": "data/Capsula/ARD_fine.stl",
       "triangles": 9788,
       "model": "MN",
       "Mach": 8.0,

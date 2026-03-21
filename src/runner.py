@@ -497,6 +497,110 @@ def generate_plots(
 # Barlovento / Sotavento + CD vs α multi-Mach
 # ══════════════════════════════════════════════════════════════════════════════
 
+def generate_cp_distribution_plots(
+    centers_cap, areas_cap, normals_cap, S_cap, L_cap, r_cap,
+    centers_sp,  areas_sp,  normals_sp,  S_sp,  L_sp,  r_sp,
+    Mach: float, gamma: float, plots_dir: Path,
+):
+    """
+    4 gráficas de distribución Cp vs ángulo desde el centro geométrico:
+      - Cápsula  MN  (alpha=0)
+      - Cápsula  MNM (alpha=0, Mach dado)
+      - Esfera   MN  (alpha=0)
+      - Esfera   MNM (alpha=0, Mach dado)
+
+    Ángulo φ ∈ [-180°, 180°]:  0° = estancamiento (cara al flujo),
+    ±180° = base/popa. Se proyecta en el plano y-z (plano meridional a α=0).
+    """
+    out_dir = Path(plots_dir) / "Cp_Distribution"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    alpha = 0.0
+    eD, eL, eM = wind_axes(alpha)
+
+    # ── Resolver los 4 casos ────────────────────────────────────────────────
+    res = {
+        ("capsule", "MN"):  solve_newton_case(
+            centers=centers_cap, areas=areas_cap, normals=normals_cap,
+            alpha_deg=alpha, S_ref=S_cap, L_ref=L_cap, r_ref=r_cap, eD=eD, eL=eL, eM=eM,
+        ),
+        ("capsule", "MNM"): solve_modified_newton_case(
+            centers=centers_cap, areas=areas_cap, normals=normals_cap,
+            alpha_deg=alpha, Mach=float(Mach),
+            S_ref=S_cap, L_ref=L_cap, r_ref=r_cap, eD=eD, eL=eL, eM=eM, gamma=gamma,
+        ),
+        ("sphere", "MN"):  solve_newton_case(
+            centers=centers_sp, areas=areas_sp, normals=normals_sp,
+            alpha_deg=alpha, S_ref=S_sp, L_ref=L_sp, r_ref=r_sp, eD=eD, eL=eL, eM=eM,
+        ),
+        ("sphere", "MNM"): solve_modified_newton_case(
+            centers=centers_sp, areas=areas_sp, normals=normals_sp,
+            alpha_deg=alpha, Mach=float(Mach),
+            S_ref=S_sp, L_ref=L_sp, r_ref=r_sp, eD=eD, eL=eL, eM=eM, gamma=gamma,
+        ),
+    }
+
+    # ── Ángulo φ desde la dirección de estancamiento ────────────────────────
+    # Para α=0, Vinf = +y, luego mu = n·(-Vinf) = -n_y.
+    # φ = arccos(mu): 0° en estancamiento (mu=1), 180° en la base (mu=-1).
+    # Signo dado por n_z para distinguir semiesferas +z / -z.
+    # Con esta definición cos(φ) = mu exactamente → la esfera cae sobre la curva.
+    def _phi(normals):
+        mu = np.clip(-normals[:, 1], -1.0, 1.0)          # mu = n·(-Vinf_hat)
+        theta = np.degrees(np.arccos(mu))                  # [0, 180]
+        sign  = np.where(normals[:, 2] >= 0, 1.0, -1.0)   # ±1 según n_z
+        return sign * theta                                 # [-180, 180]
+
+    phi_cap = _phi(normals_cap)
+    phi_sp  = _phi(normals_sp)
+
+    # ── Curva teórica en el rango [-180, 180] ───────────────────────────────
+    phi_th = np.linspace(-180, 180, 600)
+
+    labels = {"capsule": "Cápsula ARD", "sphere": "Esfera"}
+    colors = {
+        ("capsule", "MN"):  "#1a1a1a",
+        ("capsule", "MNM"): "#B71C1C",
+        ("sphere",  "MN"):  "#1a1a1a",
+        ("sphere",  "MNM"): "#B71C1C",
+    }
+    phi_map = {"capsule": phi_cap, "sphere": phi_sp}
+
+    for (geo, method), r_dict in res.items():
+        phi     = phi_map[geo]
+        cp_vals = np.asarray(r_dict["cp"])
+        cp_max  = float(r_dict["cp_max"]) if "cp_max" in r_dict else float(cp_vals.max())
+
+        # Curva teórica: cp_max · cos²φ  (cero en sotavento)
+        cp_th_curve = np.maximum(0.0, cp_max * np.cos(np.radians(phi_th)) ** 2)
+
+        fig, ax = plt.subplots(figsize=(11, 5))
+        ax.scatter(phi, cp_vals, s=4, alpha=0.35, color=colors[(geo, method)],
+                   label=f"Caras ({len(phi):,})")
+        ax.plot(phi_th, cp_th_curve, color="#333333", lw=1.8, ls="--",
+                label=f"Cp_max·cos²φ  (Cp_max={cp_max:.3f})")
+        ax.axvline(x=-90, color="#aaaaaa", ls=":", lw=1)
+        ax.axvline(x=+90, color="#aaaaaa", ls=":", lw=1)
+        ax.axhline(y=0,   color="#aaaaaa", ls="-", lw=0.8)
+        ax.set_xlim(-180, 180)
+        ax.set_ylim(bottom=-0.05)
+        ax.set_xticks(range(-180, 181, 30))
+        _setup_ax(
+            ax,
+            xlabel="φ (°)  — ángulo de la normal desde estancamiento",
+            ylabel="Cp",
+            title=f"{labels[geo]} — Distribución Cp  ·  {method}  ·  α=0°  ·  M∞={Mach}",
+        )
+        ax.legend(fontsize=9, markerscale=3)
+        plt.tight_layout()
+        fname = f"cp_dist_{geo}_{method.lower()}.png"
+        fig.savefig(out_dir / fname, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  ✓ {fname}")
+
+    print(f"  → Plots guardados en {out_dir}")
+
+
 def generate_windward_plots(
     centers, areas, normals, S_ref, L_ref, r_ref,
     alphas_deg: list, mach_sweep: list,
@@ -1194,6 +1298,20 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
             mesh_sweeps_mnm=mesh_sweeps_mnm or None,
             mesh_mach_sweeps_mnm=mesh_mach_sweeps_mnm or None,
             mesh_tri_counts=mesh_tri_counts or None,
+        )
+
+    if config.get("RUN_CP_DISTRIBUTION", True):
+        print("\n" + "═"*60)
+        print("Distribución Cp vs ángulo (cápsula + esfera) …")
+        print("═"*60)
+        generate_cp_distribution_plots(
+            centers_cap=c_cap, areas_cap=a_cap, normals_cap=n_cap,
+            S_cap=S_cap, L_cap=L_cap, r_cap=r_cap,
+            centers_sp=c_sp,  areas_sp=a_sp,  normals_sp=n_sp,
+            S_sp=S_sp,  L_sp=L_sp,  r_sp=r_sp,
+            Mach=config.get("CP_DIST_MACH", 1.0),
+            gamma=GAMMA,
+            plots_dir=plots_dir,
         )
 
     if config.get("RUN_VALIDATION", False):
