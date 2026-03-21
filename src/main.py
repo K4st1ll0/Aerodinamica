@@ -30,14 +30,12 @@ PLOTS_DIR.mkdir(exist_ok=True)
 
 config = {
 
-    # ── Geometrías STL ──────────────────────────────────────────────────────
-    "STL_CAPSULE": DATA_DIR / "Capsula" / "ARD_coarse.stl",     # malla principal
-    "STL_SPHERE":  DATA_DIR / "esfera" / "esfera.stl",
-    "STL_COARSE":  DATA_DIR / "Capsula" / "ARD_coarsest.stl",   # malla gruesa
-    "STL_FINE":    DATA_DIR / "Capsula" / "ARD_ultrafine.stl",  # malla fina
+    # ── Geometrías STL principales ──────────────────────────────────────────
+    "STL_CAPSULE": DATA_DIR / "Capsula" / "ARD_chillfine.stl",   # malla principal
+    "STL_SPHERE":  DATA_DIR / "esfera"  / "esfera.stl",
 
     # ── Condiciones de flujo ────────────────────────────────────────────────
-    "ALPHAS_DEG": [0.0, 10.0, 20.0, 30.0],        # barrido en alpha (para sweeps)
+    "ALPHAS_DEG": [-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0],        # barrido en alpha (para sweeps)
     "MACH":       8.0,                             # Mach para el barrido en alpha
     "MACH_SWEEP": [1.0, 2.0, 4.0, 8.0, 12.0, 15.0, 20.0],  # Machs para barrido Mach
     "GAMMA":      1.4,
@@ -70,6 +68,9 @@ config = {
 
     # ── Visualización geométrica al arrancar ────────────────────────────────
     "SHOW_GEOMETRY": True,
+
+    # ── Barlovento / Sotavento + CD vs α multi-Mach ─────────────────────────
+    "RUN_WINDWARD_PLOTS":    True,
 
     # ── Validación esfera vs datos MATLAB ───────────────────────────────────
     "RUN_VALIDATION":        True,

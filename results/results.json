@@ -16,25 +16,25 @@
     "alpha_definition": "alpha>0 inclina el flujo hacia -z (morro arriba). Vinf=[0,-cos(a),-sin(a)].",
     "vinf_direction_body": [
       0.0,
-      -1.0,
-      -0.0
+      1.0,
+      0.0
     ],
-    "Sref_m2": 7.74406313,
+    "Sref_m2": 7.83997539,
     "Lref_m": 2.040038,
     "moment_reference_point_m": [
-      -0.0,
-      -1.847147,
-      -0.0
+      0.0,
+      -1.847361,
+      0.0
     ],
     "CD_axis_body": [
       0.0,
-      -1.0,
-      -0.0
+      1.0,
+      0.0
     ],
     "CL_axis_body": [
       0.0,
       0.0,
-      -1.0
+      1.0
     ],
     "CM_axis_body": [
       1.0,
@@ -52,16 +52,16 @@
       "Mach": 8.0,
       "alpha_deg": 0.0,
       "CD": 1.00281549,
-      "CL": 0.0,
-      "CM": -0.0,
+      "CL": -0.0,
+      "CM": 0.0,
       "force_coeff_body": [
-        0.0,
-        -1.00281549,
+        -0.0,
+        1.00281549,
         -0.0
       ],
       "moment_coeff_body": [
-        -0.0,
         0.0,
+        -0.0,
         -0.0
       ]
     },
@@ -77,13 +77,13 @@
       "CL": -0.0,
       "CM": 0.0,
       "force_coeff_body": [
-        0.0,
-        -0.8309832,
-        0.0
+        -0.0,
+        0.8309832,
+        -0.0
       ],
       "moment_coeff_body": [
         0.0,
-        0.0,
+        -0.0,
         -0.0
       ]
     },
@@ -97,148 +97,148 @@
       "alpha_deg": 0.0,
       "CD": 0.91624955,
       "CL": -0.0,
-      "CM": 0.0,
+      "CM": -0.0,
       "force_coeff_body": [
-        0.0,
-        -0.91624955,
-        0.0
+        -0.0,
+        0.91624955,
+        -0.0
       ],
       "moment_coeff_body": [
-        0.0,
-        0.0,
+        -0.0,
+        -0.0,
         -0.0
       ]
     },
     {
       "case_id": "capsule_MN_a0_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_coarse.stl",
-      "triangles": 1438,
+      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "triangles": 9788,
       "model": "MN",
       "Mach": 8.0,
       "alpha_deg": 0.0,
-      "CD": 0.60946017,
-      "CL": 0.0,
+      "CD": 1.36150262,
+      "CL": -0.0,
       "CM": 0.0,
       "force_coeff_body": [
         0.0,
-        -0.60946017,
+        1.36150262,
         -0.0
       ],
       "moment_coeff_body": [
         0.0,
-        1.354e-05,
-        0.0
+        2.9e-07,
+        -0.0
       ]
     },
     {
       "case_id": "capsule_MNM_a0_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_coarse.stl",
-      "triangles": 1438,
+      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "triangles": 9788,
       "model": "MNM",
       "Mach": 8.0,
       "alpha_deg": 0.0,
-      "CD": 0.5568498,
+      "CD": 1.24397376,
       "CL": -0.0,
       "CM": 0.0,
       "force_coeff_body": [
-        0.0,
-        -0.5568498,
-        0.0
+        -0.0,
+        1.24397376,
+        -0.0
       ],
       "moment_coeff_body": [
         0.0,
-        1.237e-05,
-        0.0
+        2.6e-07,
+        -0.0
       ]
     },
     {
       "case_id": "capsule_MNM_a10_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_coarse.stl",
-      "triangles": 1438,
+      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "triangles": 9788,
       "model": "MNM",
       "Mach": 8.0,
       "alpha_deg": 10.0,
-      "CD": 0.57080844,
-      "CL": 0.05125667,
-      "CM": 0.02519638,
+      "CD": 1.19659806,
+      "CL": -0.17799803,
+      "CM": 0.02616956,
       "force_coeff_body": [
-        -0.00014779,
-        -0.55323595,
-        -0.14959781
+        -0.0,
+        1.20932808,
+        0.03249323
       ],
       "moment_coeff_body": [
-        0.02519638,
-        1.39e-05,
-        -2.069e-05
+        0.02616956,
+        2.5e-07,
+        -5e-08
       ]
     },
     {
       "case_id": "capsule_MNM_a20_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_coarse.stl",
-      "triangles": 1438,
+      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "triangles": 9788,
       "model": "MNM",
       "Mach": 8.0,
       "alpha_deg": 20.0,
-      "CD": 0.60673452,
-      "CL": 0.08095755,
-      "CM": 0.04739123,
+      "CD": 1.06363657,
+      "CL": -0.32130094,
+      "CM": 0.04946252,
       "force_coeff_body": [
-        -0.00019032,
-        -0.54245484,
-        -0.28359064
+        -1.85e-06,
+        1.10938283,
+        0.06186101
       ],
       "moment_coeff_body": [
-        0.04739123,
-        2.086e-05,
-        -7.94e-06
+        0.04946252,
+        2.7e-07,
+        8.8e-07
       ]
     },
     {
       "case_id": "capsule_MN_mesh_coarse_a10_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_coarsest.stl",
-      "triangles": 194,
+      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "triangles": 9788,
       "model": "MN",
       "Mach": 8.0,
       "alpha_deg": 10.0,
-      "CD": 0.57360473,
-      "CL": 0.05861168,
-      "CM": 0.02289374,
+      "CD": 1.30965093,
+      "CL": -0.19481503,
+      "CM": 0.02864202,
       "force_coeff_body": [
-        -0.00030958,
-        -0.55471258,
-        -0.15732665
+        -0.0,
+        1.32358366,
+        0.03556315
       ],
       "moment_coeff_body": [
-        0.02289374,
-        -0.00037446,
-        -0.00020457
+        0.02864202,
+        2.8e-07,
+        -5e-08
       ]
     },
     {
       "case_id": "capsule_MN_mesh_fine_a10_M8",
       "geometry_name": "capsule",
-      "stl_file": "data/Capsula/ARD_ultrafine.stl",
-      "triangles": 350794,
+      "stl_file": "data/Capsula/ARD_chillfine.stl",
+      "triangles": 9788,
       "model": "MN",
       "Mach": 8.0,
       "alpha_deg": 10.0,
-      "CD": 0.63949174,
-      "CL": 0.0551553,
-      "CM": 0.02947534,
+      "CD": 1.30965093,
+      "CL": -0.19481503,
+      "CM": 0.02864202,
       "force_coeff_body": [
         -0.0,
-        -0.6201988,
-        -0.16536394
+        1.32358366,
+        0.03556315
       ],
       "moment_coeff_body": [
-        0.02947534,
-        -0.0,
-        -0.0
+        0.02864202,
+        2.8e-07,
+        -5e-08
       ]
     }
   ]

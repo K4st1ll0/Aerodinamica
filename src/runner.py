@@ -10,9 +10,30 @@ main.py solo define configuración y llama a run_pipeline(config).
 from pathlib import Path
 import csv
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+# ── Estilo formal para todas las gráficas ──────────────────────────────────
+matplotlib.rcParams.update({
+    "figure.facecolor":  "white",
+    "axes.facecolor":    "white",
+    "axes.edgecolor":    "#333333",
+    "axes.grid":         True,
+    "grid.color":        "#dddddd",
+    "grid.linewidth":    0.8,
+    "axes.spines.top":   False,
+    "axes.spines.right": False,
+    "font.family":       "sans-serif",
+    "font.size":         10,
+    "axes.titlesize":    11,
+    "axes.labelsize":    10,
+    "legend.fontsize":   9,
+    "lines.linewidth":   1.8,
+    "savefig.facecolor": "white",
+    "savefig.dpi":       150,
+})
 
 from stl_utils import load_stl, print_mesh_summary, compute_face_geometry, plot_geom
 from MN  import solve_newton_case
@@ -47,9 +68,10 @@ def get_sphere_refs(geom):
 
 
 def wind_axes(alpha_deg):
-    """Devuelve (eD, eL, eM) en ejes viento para un alpha dado."""
+    """Devuelve (eD, eL, eM) en ejes viento para un alpha dado.
+    flujo en +y a alpha=0 (escudo térmico en -y enfrenta el flujo)."""
     a    = np.deg2rad(alpha_deg)
-    eD   = np.array([0., -np.cos(a), -np.sin(a)])
+    eD   = np.array([0., +np.cos(a), +np.sin(a)])
     eD  /= np.linalg.norm(eD)
     eM   = np.array([1., 0., 0.])
     eL   = np.cross(eM, eD); eL /= np.linalg.norm(eL)
@@ -228,15 +250,8 @@ def generate_plots(
     rows_mn=None,
     rows_mnm=None,
     rows_mach=None,
-    rows_mesh=None,
-    rows_mn_coarse=None,
-    rows_mn_fine=None,
-    rows_mnm_coarse=None,
-    rows_mnm_fine=None,
     sphere_mach_rows=None,
     sphere_mn_cases=None,
-    coarse_label="ARD_coarsest",
-    fine_label="ARD_ultrafine",
     mesh_sweeps_mn=None,
     mesh_sweeps_mnm=None,
     mesh_mach_sweeps_mnm=None,
@@ -479,6 +494,102 @@ def generate_plots(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Barlovento / Sotavento + CD vs α multi-Mach
+# ══════════════════════════════════════════════════════════════════════════════
+
+def generate_windward_plots(
+    centers, areas, normals, S_ref, L_ref, r_ref,
+    alphas_deg: list, mach_sweep: list,
+    plots_dir: Path, alpha_ref: float = 20.0, gamma: float = 1.4,
+):
+    """
+    Guarda en plots_dir/MNM_y_Barlovento/:
+      1. cp_barlovento_sotavento.png — Cp de cada cara (barlovento/sotavento) para MN y MNM
+      2. CD_vs_alpha_multiMach.png   — CD vs α: curva MN + curvas MNM a varios Mach
+    """
+    out_dir = Path(plots_dir) / "MNM_y_Barlovento"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    eD, eL, eM = wind_axes(alpha_ref)
+
+    # ── Resolver MN ─────────────────────────────────────────────────────────
+    r_mn  = solve_newton_case(
+        centers=centers, areas=areas, normals=normals,
+        alpha_deg=alpha_ref, S_ref=S_ref, L_ref=L_ref, r_ref=r_ref,
+        eD=eD, eL=eL, eM=eM,
+    )
+    mu_mn  = np.asarray(r_mn["mu"])
+    cp_mn  = np.asarray(r_mn["cp"])
+
+    # ── Resolver MNM (Mach = mach_sweep[len//2] para la referencia) ─────────
+    mach_ref = mach_sweep[len(mach_sweep) // 2] if mach_sweep else 8.0
+    r_mnm = solve_modified_newton_case(
+        centers=centers, areas=areas, normals=normals,
+        alpha_deg=alpha_ref, Mach=mach_ref, S_ref=S_ref, L_ref=L_ref, r_ref=r_ref,
+        eD=eD, eL=eL, eM=eM, gamma=gamma,
+    )
+    mu_mnm = np.asarray(r_mnm["mu"])
+    cp_mnm = np.asarray(r_mnm["cp"])
+
+    # ── Plot 1: Cp por cara — barlovento y sotavento ─────────────────────────
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5), sharey=False)
+    fig.suptitle(f"Distribución Cp por cara — cápsula  (α={alpha_ref:.0f}°)",
+                 fontsize=13, fontweight="bold")
+
+    for ax, mu, cp, label, mach_lbl in [
+        (axes[0], mu_mn,  cp_mn,  "MN",  ""),
+        (axes[1], mu_mnm, cp_mnm, "MNM", f"  M={mach_ref:.0f}"),
+    ]:
+        phi = np.degrees(np.arccos(np.clip(mu, -1.0, 1.0)))   # 0° = estancamiento
+        wind = mu > 0
+        lee  = ~wind
+
+        ax.scatter(phi[wind], cp[wind],  s=6, alpha=0.5, color="#E53935",
+                   label=f"Barlovento  ({wind.sum():,} caras)")
+        ax.scatter(phi[lee],  cp[lee],   s=6, alpha=0.4, color="#1E88E5",
+                   label=f"Sotavento   ({lee.sum():,} caras)")
+        ax.axvline(x=90, color="gray", ls="--", lw=1, label="φ = 90°")
+        _setup_ax(ax, "φ (°) desde estancamiento", "Cp",
+                  f"{label}{mach_lbl}")
+        ax.legend(fontsize=9, markerscale=2)
+
+    plt.tight_layout()
+    fig.savefig(out_dir / "cp_barlovento_sotavento.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  ✓ cp_barlovento_sotavento.png")
+
+    # ── Plot 2: CD vs α — MN + MNM a varios Mach ────────────────────────────
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.suptitle("CD vs α — MN y MNM (varios Mach)", fontsize=13, fontweight="bold")
+
+    # Ejes cuerpo (mismos que el pipeline principal)
+    _eD = np.array([0., -1., 0.])
+    _eL = np.array([0.,  0., -1.])
+    _eM = np.array([1.,  0., 0.])
+
+    # Curva MN
+    rows_mn = run_mn_sweep(alphas_deg, centers, areas, normals,
+                           S_ref, L_ref, r_ref, _eD, _eL, _eM)
+    ax.plot([r["alpha_deg"] for r in rows_mn], [r["CD"] for r in rows_mn],
+            "o-", color=_COLORS["MN"], lw=2.5, ms=7, label="MN")
+
+    # Curvas MNM a cada Mach
+    mach_colors = plt.cm.plasma(np.linspace(0.1, 0.85, len(mach_sweep)))
+    for idx, M in enumerate(mach_sweep):
+        rows_m = run_mnm_sweep(alphas_deg, M, centers, areas, normals,
+                               S_ref, L_ref, r_ref, _eD, _eL, _eM, gamma)
+        ax.plot([r["alpha_deg"] for r in rows_m], [r["CD"] for r in rows_m],
+                "s--", color=mach_colors[idx], lw=1.8, ms=5, label=f"MNM  M={M:.0f}")
+
+    _setup_ax(ax, "α (°)", "CD", "CD vs α — MN y MNM a varios Mach  (Cápsula)")
+    ax.legend(fontsize=9, ncol=2)
+    plt.tight_layout()
+    fig.savefig(out_dir / "CD_vs_alpha_multiMach.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  ✓ CD_vs_alpha_multiMach.png")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Validación: esfera vs datos MATLAB
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -660,7 +771,7 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     RUN_MACH_SWEEP       = config.get("RUN_MACH_SWEEP", True)
     RUN_MESH_SENSITIVITY = config.get("RUN_MESH_SENSITIVITY", True)
     RUN_SPHERE_MACH_SWEEP = config.get("RUN_SPHERE_MACH_SWEEP", True)
-    RUN_MESH_ALPHA_SWEEP  = config.get("RUN_MESH_ALPHA_SWEEP", True)
+    RUN_MESH_ALPHA_SWEEP = config.get("RUN_MESH_ALPHA_SWEEP", True)
 
     MESH_ALPHA = config.get("MESH_ALPHA", 10.0)
     MESH_MACH  = config.get("MESH_MACH", 8.0)
@@ -675,7 +786,6 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
 
     # Inicializar resultados de sweeps como None (se asignan si el sweep se ejecuta)
     rows_mn = rows_mnm = rows_mach = rows_mesh = None
-    rows_mn_coarse = rows_mn_fine = rows_mnm_coarse = rows_mnm_fine = None
     sphere_mach_rows = None
 
     eD0 = np.array([0., -1.,  0.])
@@ -805,7 +915,7 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     mesh_mach_sweeps_mnm = {}   # {stem: rows_mach}  — barrido Mach por malla
     mesh_tri_counts     = {}    # {stem: n_tri}
 
-    if config.get("RUN_MESH_ALPHA_SWEEP", True) and MESH_STLS:
+    if RUN_MESH_ALPHA_SWEEP and MESH_STLS:
         print(f"\n── Barrido alpha (MN + MNM) para todas las mallas de sensibilidad")
         for stl_p in MESH_STLS:
             if not stl_p.exists():
@@ -825,7 +935,7 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
             mesh_sweeps_mnm[name] = rows_mnm_sw
             mesh_tri_counts[name] = len(a_sw)
 
-    if config.get("RUN_MESH_ALPHA_SWEEP", True) and MESH_STLS and MACH_SWEEP:
+    if RUN_MESH_ALPHA_SWEEP and MESH_STLS and MACH_SWEEP:
         alpha_mesh = config.get("MESH_ALPHA", 10.0)
         eD_mm, eL_mm, eM_mm = wind_axes(alpha_mesh)
         print(f"\n── Barrido Mach MNM para todas las mallas (α={alpha_mesh}°)")
@@ -849,11 +959,6 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
             )
             mesh_mach_sweeps_mnm[name] = rows_mach_mm
 
-    # Mantener compatibilidad con variables coarse/fine para los 9 casos
-    rows_mn_coarse  = mesh_sweeps_mn.get(STL_COARSE.stem)  if STL_COARSE else None
-    rows_mn_fine    = mesh_sweeps_mn.get(STL_FINE.stem)    if STL_FINE   else None
-    rows_mnm_coarse = mesh_sweeps_mnm.get(STL_COARSE.stem) if STL_COARSE else None
-    rows_mnm_fine   = mesh_sweeps_mnm.get(STL_FINE.stem)   if STL_FINE   else None
 
     # ══════════════════════════════════════════════════════════════════════
     # 9 CASOS OBLIGATORIOS
@@ -1020,22 +1125,29 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
         rows_mn=rows_mn if RUN_MN_SWEEP else None,
         rows_mnm=rows_mnm if RUN_MNM_SWEEP else None,
         rows_mach=rows_mach if RUN_MACH_SWEEP else None,
-        rows_mesh=rows_mesh if RUN_MESH_SENSITIVITY and MESH_STLS else None,
-        rows_mn_coarse=rows_mn_coarse,
-        rows_mn_fine=rows_mn_fine,
-        rows_mnm_coarse=rows_mnm_coarse,
-        rows_mnm_fine=rows_mnm_fine,
         sphere_mach_rows=sphere_mach_rows,
         sphere_mn_cases=sphere_mn_cases,
-        coarse_label=STL_COARSE.stem if STL_COARSE else "coarse",
-        fine_label=STL_FINE.stem   if STL_FINE   else "fine",
-        mesh_sweeps_mn=mesh_sweeps_mn           if mesh_sweeps_mn       else None,
-        mesh_sweeps_mnm=mesh_sweeps_mnm         if mesh_sweeps_mnm      else None,
-        mesh_mach_sweeps_mnm=mesh_mach_sweeps_mnm if mesh_mach_sweeps_mnm else None,
-        mesh_tri_counts=mesh_tri_counts         if mesh_tri_counts      else None,
+        mesh_sweeps_mn=mesh_sweeps_mn or None,
+        mesh_sweeps_mnm=mesh_sweeps_mnm or None,
+        mesh_mach_sweeps_mnm=mesh_mach_sweeps_mnm or None,
+        mesh_tri_counts=mesh_tri_counts or None,
     )
 
     # ── Validación esfera ────────────────────────────────────────────────────
+    if config.get("RUN_WINDWARD_PLOTS", True):
+        print("\n" + "═"*60)
+        print("Generando gráficas barlovento/sotavento + CD vs α multi-Mach …")
+        print("═"*60)
+        generate_windward_plots(
+            centers=c_cap, areas=a_cap, normals=n_cap,
+            S_ref=S_cap, L_ref=L_cap, r_ref=r_cap,
+            alphas_deg=ALPHAS_DEG,
+            mach_sweep=MACH_SWEEP,
+            plots_dir=plots_dir,
+            alpha_ref=CP_MAP_ALPHA if CP_MAP_ALPHA is not None else 20.0,
+            gamma=GAMMA,
+        )
+
     if config.get("RUN_VALIDATION", False):
         print("\n" + "═"*60)
         print("Validación: esfera vs datos MATLAB …")

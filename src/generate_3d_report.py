@@ -140,7 +140,7 @@ def _ji(arr) -> str:
 
 def _wind_axes(alpha_deg):
     a  = np.deg2rad(alpha_deg)
-    eD = np.array([0., -np.cos(a), -np.sin(a)])
+    eD = np.array([0., +np.cos(a), +np.sin(a)])
     eD /= np.linalg.norm(eD)
     eM = np.array([1., 0., 0.])
     eL = np.cross(eM, eD); eL /= np.linalg.norm(eL)
@@ -422,11 +422,8 @@ def generate_3d_html(
     mach_pts   = [int(m) for m in _INTERACTIVE_MACHS]
     cpmax_pts  = [round(cpmax_analytic(m), 5) for m in mach_pts]
     cd_mnm_pts = [round(cpmax_analytic(m) / 2, 5) for m in mach_pts]
-    _INTERACTIVE_MESHES = {
-        "PruebaARD":  DATA_DIR / "Capsula" / "PruebaARD.stl",
-        "PruebaARD3": DATA_DIR / "Capsula" / "PruebaARD3.stl",
-        "PruebaARD4": DATA_DIR / "Capsula" / "PruebaARD4.stl",
-    }
+    _cap_key = stl_capsule.stem if stl_capsule else "capsule"
+    _INTERACTIVE_MESHES = {_cap_key: stl_capsule} if stl_capsule and stl_capsule.exists() else {}
     print("\nPre-computando Cp interactivos (cápsula)...")
     geom_db, cp_db = compute_interactive_data(
         _INTERACTIVE_MESHES, _INTERACTIVE_ALPHAS, _INTERACTIVE_MACHS
@@ -447,7 +444,7 @@ def generate_3d_html(
 
     # ── Extraer series para gráficas desde cp_db y sph_cp_db ───────────────
     def _gcap(model, a, m):
-        try: return cp_db['PruebaARD3'][model][str(int(a))][str(int(m))]
+        try: return cp_db[_cap_key][model][str(int(a))][str(int(m))]
         except: return {}
     def _gsph(model, a, m):
         try: return sph_cp_db['sphere'][model][str(int(a))][str(int(m))]

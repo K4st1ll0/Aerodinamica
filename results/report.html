@@ -120,11 +120,11 @@ footer{margin-top:68px;padding-top:20px;border-top:1px solid var(--border);
     <div class="rgrid">
       <div class="ri"><div class="rk">ESFERA · S_ref</div><div class="rv">0.007742 m²</div></div>
       <div class="ri"><div class="rk">ESFERA · L_ref</div><div class="rv">0.0993 m (2R)</div></div>
-      <div class="ri"><div class="rk">CÁPSULA · S_ref</div><div class="rv">7.7441 m²</div></div>
+      <div class="ri"><div class="rk">CÁPSULA · S_ref</div><div class="rv">7.8400 m²</div></div>
       <div class="ri"><div class="rk">CÁPSULA · L_ref</div><div class="rv">2.0400 m</div></div>
       <div class="ri"><div class="rk">r_ref · CÁPSULA</div>
-        <div class="rv">[-0.00, -1.85, -0.00] m</div></div>
-      <div class="ri"><div class="rk">MALLA CÁPSULA</div><div class="rv">1438 triángulos</div></div>
+        <div class="rv">[0.00, -1.85, 0.00] m</div></div>
+      <div class="ri"><div class="rk">MALLA CÁPSULA</div><div class="rv">9788 triángulos</div></div>
     </div>
   </div>
 </div>
@@ -184,15 +184,15 @@ footer{margin-top:68px;padding-top:20px;border-top:1px solid var(--border);
 
 <script>
 const CASES=[
-  { id:"sphere_MN_a0_M8", geo:"sphere", model:"MN", M:8.0, a:0.0, CD:1.00281549, CL:0.0, CM:-0.0, nw:0 },
+  { id:"sphere_MN_a0_M8", geo:"sphere", model:"MN", M:8.0, a:0.0, CD:1.00281549, CL:-0.0, CM:0.0, nw:0 },
   { id:"sphere_MNM_a0_M2", geo:"sphere", model:"MNM", M:2.0, a:0.0, CD:0.8309832, CL:-0.0, CM:0.0, nw:0 },
-  { id:"sphere_MNM_a0_M8", geo:"sphere", model:"MNM", M:8.0, a:0.0, CD:0.91624955, CL:-0.0, CM:0.0, nw:0 },
-  { id:"capsule_MN_a0_M8", geo:"capsule", model:"MN", M:8.0, a:0.0, CD:0.60946017, CL:0.0, CM:0.0, nw:0 },
-  { id:"capsule_MNM_a0_M8", geo:"capsule", model:"MNM", M:8.0, a:0.0, CD:0.5568498, CL:-0.0, CM:0.0, nw:0 },
-  { id:"capsule_MNM_a10_M8", geo:"capsule", model:"MNM", M:8.0, a:10.0, CD:0.57080844, CL:0.05125667, CM:0.02519638, nw:0 },
-  { id:"capsule_MNM_a20_M8", geo:"capsule", model:"MNM", M:8.0, a:20.0, CD:0.60673452, CL:0.08095755, CM:0.04739123, nw:0 },
-  { id:"capsule_MN_mesh_coarse_a10_M8", geo:"capsule", model:"MN", M:8.0, a:10.0, CD:0.57360473, CL:0.05861168, CM:0.02289374, nw:0 },
-  { id:"capsule_MN_mesh_fine_a10_M8", geo:"capsule", model:"MN", M:8.0, a:10.0, CD:0.63949174, CL:0.0551553, CM:0.02947534, nw:0 }
+  { id:"sphere_MNM_a0_M8", geo:"sphere", model:"MNM", M:8.0, a:0.0, CD:0.91624955, CL:-0.0, CM:-0.0, nw:0 },
+  { id:"capsule_MN_a0_M8", geo:"capsule", model:"MN", M:8.0, a:0.0, CD:1.36150262, CL:-0.0, CM:0.0, nw:0 },
+  { id:"capsule_MNM_a0_M8", geo:"capsule", model:"MNM", M:8.0, a:0.0, CD:1.24397376, CL:-0.0, CM:0.0, nw:0 },
+  { id:"capsule_MNM_a10_M8", geo:"capsule", model:"MNM", M:8.0, a:10.0, CD:1.19659806, CL:-0.17799803, CM:0.02616956, nw:0 },
+  { id:"capsule_MNM_a20_M8", geo:"capsule", model:"MNM", M:8.0, a:20.0, CD:1.06363657, CL:-0.32130094, CM:0.04946252, nw:0 },
+  { id:"capsule_MN_mesh_coarse_a10_M8", geo:"capsule", model:"MN", M:8.0, a:10.0, CD:1.30965093, CL:-0.19481503, CM:0.02864202, nw:0 },
+  { id:"capsule_MN_mesh_fine_a10_M8", geo:"capsule", model:"MN", M:8.0, a:10.0, CD:1.30965093, CL:-0.19481503, CM:0.02864202, nw:0 }
 ];
 const MACH=[2, 4, 6, 8, 10, 12, 15, 20, 30, 50];
 const CPMAX=[1.31166, 1.59868, 1.65179, 1.67038, 1.67899, 1.68366, 1.68748, 1.69046, 1.69258, 1.69367];
