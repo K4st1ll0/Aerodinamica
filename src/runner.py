@@ -227,13 +227,13 @@ def save_cp_csv(filepath, centers, cp):
 # ══════════════════════════════════════════════════════════════════════════════
 
 _COLORS = {
-    "MN":      "#2196F3",
-    "MNM":     "#FF5722",
-    "coarse":  "#E91E63",
-    "fine":    "#4CAF50",
-    "medium":  "#FF9800",
-    "sphere":  "#00BCD4",
-    "capsule": "#9C27B0",
+    "MN":      "#1a1a1a",   # negro — Newton
+    "MNM":     "#B71C1C",   # rojo oscuro — Modified Newton
+    "coarse":  "#5D4037",   # marrón oscuro
+    "fine":    "#1B5E20",   # verde oscuro
+    "medium":  "#4A148C",   # púrpura oscuro
+    "sphere":  "#0D47A1",   # azul oscuro
+    "capsule": "#1a1a1a",   # negro
 }
 
 def _setup_ax(ax, xlabel="", ylabel="", title="", grid=True):
@@ -319,7 +319,7 @@ def generate_plots(
         M = _col(rows_mach, "Mach")
         for ax, key, color in zip(
             axes.flat[:3], ["CD", "CL", "CM"],
-            [_COLORS["MNM"], "#4CAF50", "#9C27B0"],
+            [_COLORS["MNM"], _COLORS["fine"], _COLORS["medium"]],
         ):
             ax.plot(M, _col(rows_mach, key), "D-", color=color, lw=2, ms=6)
             _setup_ax(ax, "M∞", key, f"{key} vs M∞ (MNM)")
@@ -347,7 +347,7 @@ def generate_plots(
                         color=_COLORS["MN"], zorder=5, s=60, marker="^", label="MN M=8")
         _setup_ax(ax0, "M∞", "CD", "CD vs M∞ — Esfera")
         ax0.legend(fontsize=10)
-        ax1.plot(M, CP, "^-", color="#FF9800", lw=2.5, ms=7)
+        ax1.plot(M, CP, "^-", color="#B71C1C", lw=2.5, ms=7)
         _setup_ax(ax1, "M∞", "Cp,max", "Cp,max vs M∞ — Esfera (Rayleigh-Pitot)")
         plt.tight_layout()
         fig.savefig(pd_dir / "sphere_vs_mach.png", dpi=150, bbox_inches="tight")
@@ -356,7 +356,7 @@ def generate_plots(
 
     # ── helpers de malla (usados en secciones 6 y 7) ─────────────────────────
     _tri = mesh_tri_counts or {}
-    _mesh_colors  = plt.cm.plasma(np.linspace(0.1, 0.85, max(len(mesh_sweeps_mn or {}), 1)))
+    _mesh_colors  = plt.cm.cividis(np.linspace(0.1, 0.85, max(len(mesh_sweeps_mn or {}), 1)))
     _mesh_markers = ["o", "s", "^", "D", "v", "P", "X"]
 
     def _mesh_lbl(name):
@@ -544,9 +544,9 @@ def generate_windward_plots(
         wind = mu > 0
         lee  = ~wind
 
-        ax.scatter(phi[wind], cp[wind],  s=6, alpha=0.5, color="#E53935",
+        ax.scatter(phi[wind], cp[wind],  s=6, alpha=0.5, color="#B71C1C",
                    label=f"Barlovento  ({wind.sum():,} caras)")
-        ax.scatter(phi[lee],  cp[lee],   s=6, alpha=0.4, color="#1E88E5",
+        ax.scatter(phi[lee],  cp[lee],   s=6, alpha=0.4, color="#9E9E9E",
                    label=f"Sotavento   ({lee.sum():,} caras)")
         ax.axvline(x=90, color="gray", ls="--", lw=1, label="φ = 90°")
         _setup_ax(ax, "φ (°) desde estancamiento", "Cp",
@@ -562,22 +562,33 @@ def generate_windward_plots(
     fig, ax = plt.subplots(figsize=(10, 6))
     fig.suptitle("CD vs α — MN y MNM (varios Mach)", fontsize=13, fontweight="bold")
 
-    # Ejes cuerpo (mismos que el pipeline principal)
-    _eD = np.array([0., -1., 0.])
-    _eL = np.array([0.,  0., -1.])
-    _eM = np.array([1.,  0., 0.])
+    # Curva MN — ejes viento por cada alpha
+    def _cd_mn(alpha):
+        _eD, _eL, _eM = wind_axes(alpha)
+        r = solve_newton_case(
+            centers=centers, areas=areas, normals=normals,
+            alpha_deg=float(alpha), S_ref=S_ref, L_ref=L_ref, r_ref=r_ref,
+            eD=_eD, eL=_eL, eM=_eM,
+        )
+        return r["CD"]
 
-    # Curva MN
-    rows_mn = run_mn_sweep(alphas_deg, centers, areas, normals,
-                           S_ref, L_ref, r_ref, _eD, _eL, _eM)
-    ax.plot([r["alpha_deg"] for r in rows_mn], [r["CD"] for r in rows_mn],
-            "o-", color=_COLORS["MN"], lw=2.5, ms=7, label="MN")
+    mn_alphas = list(alphas_deg)
+    mn_cds    = [_cd_mn(a) for a in mn_alphas]
+    ax.plot(mn_alphas, mn_cds, "o-", color=_COLORS["MN"], lw=2.5, ms=7, label="MN")
 
     # Curvas MNM a cada Mach
-    mach_colors = plt.cm.plasma(np.linspace(0.1, 0.85, len(mach_sweep)))
+    mach_colors = plt.cm.cividis(np.linspace(0.1, 0.85, len(mach_sweep)))
     for idx, M in enumerate(mach_sweep):
-        rows_m = run_mnm_sweep(alphas_deg, M, centers, areas, normals,
-                               S_ref, L_ref, r_ref, _eD, _eL, _eM, gamma)
+        rows_m = []
+        for alpha in alphas_deg:
+            _eD, _eL, _eM = wind_axes(alpha)
+            r = solve_modified_newton_case(
+                centers=centers, areas=areas, normals=normals,
+                alpha_deg=float(alpha), Mach=float(M),
+                S_ref=S_ref, L_ref=L_ref, r_ref=r_ref,
+                eD=_eD, eL=_eL, eM=_eM, gamma=gamma,
+            )
+            rows_m.append(r)
         ax.plot([r["alpha_deg"] for r in rows_m], [r["CD"] for r in rows_m],
                 "s--", color=mach_colors[idx], lw=1.8, ms=5, label=f"MNM  M={M:.0f}")
 
@@ -649,15 +660,12 @@ def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
     Stheta  = tnorm @ U_DIR                     # dot(U, outward_normal)
 
     # ── MN numérico sobre el STL ─────────────────────────────────────────────
-    # Nota: nuestro solver usa flujo en -y (alpha=0), MATLAB usa flujo en +y.
-    # Para una esfera simétrica ambas mitades dan la misma distribución Cp vs mu.
-    # Usamos mu del solver como eje x para el modelo, y -Stheta para MATLAB.
     ext   = verts.max(0) - verts.min(0)
     S_ref = float(ext[0] * ext[2])
     L_ref = float(ext[1])
     r_ref = np.average(centers, axis=0, weights=areas)
-    # eD en la dirección del flujo del solver ([0,-1,0])
-    flow_solver = np.array([0., -1., 0.])
+    # eD coherente con la convención del solver: flujo en +y
+    flow_solver = np.array([0., +1., 0.])
     eM = np.array([1., 0., 0.])
     eL = np.cross(eM, flow_solver); eL /= np.linalg.norm(eL)
 
@@ -685,10 +693,10 @@ def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
 
     # ── Plot 1: Cp vs cos(φ) ────────────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(x_model,  cp_model[s_model],    s=20, alpha=0.6,
-               color="crimson",   zorder=3, label="MN (modelo)")
     ax.scatter(x_matlab, cp_matlab[s_matlab],  s=8,  alpha=0.5,
-               color="steelblue", zorder=5, label="Dato MATLAB")
+               color="#9E9E9E", zorder=3, label="Dato MATLAB")
+    ax.scatter(x_model,  cp_model[s_model],    s=20, alpha=0.8,
+               color="#B71C1C", zorder=5, label="MN (modelo)")
     ax.set_xlabel("cos φ  (ángulo de incidencia local)", fontsize=12)
     ax.set_ylabel("Cp", fontsize=12)
     ax.set_title("Validación esfera — Cp vs cos φ\nDato MATLAB vs MN (modelo numérico)",
@@ -705,10 +713,10 @@ def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
     phi_matlab = np.degrees(np.arccos(np.clip(x_matlab, 0, 1)))
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(phi_model,  cp_model[s_model],   s=20, alpha=0.6,
-               color="crimson",   zorder=3, label="MN (modelo)")
     ax.scatter(phi_matlab, cp_matlab[s_matlab], s=8,  alpha=0.5,
-               color="steelblue", zorder=5, label="Dato MATLAB")
+               color="#9E9E9E", zorder=3, label="Dato MATLAB")
+    ax.scatter(phi_model,  cp_model[s_model],   s=20, alpha=0.8,
+               color="#B71C1C", zorder=5, label="MN (modelo)")
     ax.set_xlabel("φ (°) desde estancamiento", fontsize=12)
     ax.set_ylabel("Cp", fontsize=12)
     ax.set_title("Validación esfera — Cp vs ángulo de incidencia\nDato MATLAB vs MN (modelo numérico)",
@@ -732,8 +740,8 @@ def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
         CDs_mnm.append(float(np.dot(r["CF_total"], flow_solver)))
 
     fig, ax = plt.subplots(figsize=(9, 5))
-    ax.plot(MACH_LIST, CDs_mnm, "o-", color="#E53935", lw=2.5, ms=7, label="MNM (modelo)")
-    ax.axhline(CD_mn, color="#1565C0", ls="--", lw=2, label=f"MN (modelo)  CD={CD_mn:.3f}")
+    ax.axhline(CD_mn, color="#1a1a1a", ls="--", lw=2, label=f"MN (modelo)  CD={CD_mn:.3f}")
+    ax.plot(MACH_LIST, CDs_mnm, "o-", color="#B71C1C", lw=2.5, ms=7, label="MNM (modelo)")
     ax.set_xlabel("M∞", fontsize=12)
     ax.set_ylabel("CD", fontsize=12)
     ax.set_title("CD esfera vs M∞ — modelo MN / MNM", fontsize=12, fontweight="bold")
@@ -788,9 +796,7 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     rows_mn = rows_mnm = rows_mach = rows_mesh = None
     sphere_mach_rows = None
 
-    eD0 = np.array([0., -1.,  0.])
-    eL0 = np.array([0.,  0., -1.])
-    eM0 = np.array([1.,  0.,  0.])
+    eD0, eL0, eM0 = wind_axes(0.0)   # referencia α=0 — flujo en +y
 
     # ══════════════════════════════════════════════════════════════════════
     # CÁPSULA
