@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python src/generate_3d_report.py)"
+      "Bash(python src/generate_3d_report.py)",
+      "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(pip show:*)"
     ]
   }
 }

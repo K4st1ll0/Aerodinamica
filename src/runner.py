@@ -361,7 +361,7 @@ def generate_plots(
 
     def _mesh_lbl(name):
         n = _tri.get(name)
-        return f"ARD_{n:,}" if n else name
+        return f"{name} ({n:,} tri)" if n else name
 
     # ── 6. Error relativo — referencia = malla más fina ─────────────────────
     def _mesh_error_plots(sweeps, method_label, fname_suffix, x_key, x_label, coefs=None):
@@ -761,10 +761,11 @@ def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
 def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, results_dir: Path):
     """Ejecuta el pipeline completo a partir del dict de configuración."""
 
-    STL_CAPSULE = config["STL_CAPSULE"]
-    STL_SPHERE  = config["STL_SPHERE"]
-    STL_COARSE  = config.get("STL_COARSE")
-    STL_FINE    = config.get("STL_FINE")
+    capsule_list = config.get("CAPSULES") or [config["STL_CAPSULE"]]
+    STL_CAPSULE  = capsule_list[0]          # cápsula principal para 9 casos y reports
+    STL_SPHERE   = config["STL_SPHERE"]
+    STL_COARSE   = config.get("STL_COARSE")
+    STL_FINE     = config.get("STL_FINE")
 
     ALPHAS_DEG  = config["ALPHAS_DEG"]
     MACH        = config["MACH"]
@@ -792,89 +793,11 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     GROUP_ID = config["GROUP_ID"]
     MEMBERS  = config["MEMBERS"]
 
-    # Inicializar resultados de sweeps como None (se asignan si el sweep se ejecuta)
-    rows_mn = rows_mnm = rows_mach = rows_mesh = None
-    sphere_mach_rows = None
-
+    rows_mesh = None   # sensibilidad de malla — se asigna más adelante si RUN_MESH_SENSITIVITY
     eD0, eL0, eM0 = wind_axes(0.0)   # referencia α=0 — flujo en +y
 
     # ══════════════════════════════════════════════════════════════════════
-    # CÁPSULA
-    # ══════════════════════════════════════════════════════════════════════
-    print("\n" + "═"*60)
-    print(f"Cargando cápsula: {STL_CAPSULE.name}")
-    print("═"*60)
-    mesh_cap = load_stl(STL_CAPSULE)
-    print_mesh_summary(mesh_cap)
-    geom_cap = compute_face_geometry(mesh_cap)
-    c_cap, a_cap, n_cap = geom_cap["centers"], geom_cap["areas"], geom_cap["normals"]
-    S_cap, L_cap, r_cap = get_capsule_refs(mesh_cap, geom_cap)
-    n_tri_cap = len(a_cap)
-    print(f"\n  S_ref={S_cap:.2f} mm²  L_ref={L_cap:.2f} mm  r_ref_y={r_cap[1]:.2f} mm")
-
-    if SHOW_GEOMETRY:
-        diag = np.linalg.norm(mesh_cap.bounds[1] - mesh_cap.bounds[0])
-        plot_geom(geom_cap, show_mesh=True, show_centers=True, show_normals=True,
-                  normal_scale=0.03*diag, color_by="area", title="Cápsula — geometría")
-
-    if RUN_MN_SWEEP:
-        print(f"\n── Barrido MN  | α={ALPHAS_DEG}°")
-        rows_mn = run_mn_sweep(ALPHAS_DEG, c_cap, a_cap, n_cap,
-                               S_cap, L_cap, r_cap, eD0, eL0, eM0)
-        save_csv(csv_dir / "results_mn.csv", rows_mn, CSV_FIELDS_MN)
-
-    if RUN_MNM_SWEEP:
-        print(f"\n── Barrido MNM | α={ALPHAS_DEG}°  M={MACH}")
-        rows_mnm = run_mnm_sweep(ALPHAS_DEG, MACH, c_cap, a_cap, n_cap,
-                                 S_cap, L_cap, r_cap, eD0, eL0, eM0, GAMMA)
-        save_csv(csv_dir / f"results_mnm_M{int(MACH)}.csv", rows_mnm, CSV_FIELDS_MNM)
-
-    if RUN_MACH_SWEEP:
-        print(f"\n── Barrido Mach MNM | M={MACH_SWEEP}  α=0°")
-        rows_mach = run_mach_sweep(MACH_SWEEP, 0.0, c_cap, a_cap, n_cap,
-                                   S_cap, L_cap, r_cap, eD0, eL0, eM0, GAMMA)
-        save_csv(csv_dir / "results_mnm_mach_sweep.csv", rows_mach, CSV_FIELDS_MNM)
-
-    if ALPHA_TRIM_DEG is not None:
-        print(f"\n── Coeficientes en α_trim = {ALPHA_TRIM_DEG}°  |  {ALPHA_TRIM_METHOD}  M={MACH}")
-        eD_t, eL_t, eM_t = wind_axes(ALPHA_TRIM_DEG)
-        if ALPHA_TRIM_METHOD == "MN":
-            r_t = solve_newton_case(
-                centers=c_cap, areas=a_cap, normals=n_cap, alpha_deg=ALPHA_TRIM_DEG,
-                S_ref=S_cap, L_ref=L_cap, r_ref=r_cap, eD=eD_t, eL=eL_t, eM=eM_t,
-            )
-        else:
-            r_t = solve_modified_newton_case(
-                centers=c_cap, areas=a_cap, normals=n_cap,
-                alpha_deg=ALPHA_TRIM_DEG, Mach=MACH,
-                S_ref=S_cap, L_ref=L_cap, r_ref=r_cap, eD=eD_t, eL=eL_t, eM=eM_t, gamma=GAMMA,
-            )
-        CD_t = float(r_t["CD"]); CL_t = float(r_t["CL"]); CM_t = float(r_t["CM"])
-        LD_t = CL_t / CD_t if CD_t != 0 else float("inf")
-        print(f"  CD={CD_t:.5f}  CL={CL_t:.5f}  CM={CM_t:.5f}  L/D={LD_t:.4f}")
-
-    if CP_MAP_ALPHA is not None:
-        print(f"\n── Mapa Cp | {CP_MAP_METHOD}  α={CP_MAP_ALPHA}°  M={MACH}")
-        if CP_MAP_METHOD == "MN":
-            r_cp = solve_newton_case(
-                centers=c_cap, areas=a_cap, normals=n_cap, alpha_deg=CP_MAP_ALPHA,
-                S_ref=S_cap, L_ref=L_cap, r_ref=r_cap, eD=eD0, eL=eL0, eM=eM0,
-            )
-        else:
-            r_cp = solve_modified_newton_case(
-                centers=c_cap, areas=a_cap, normals=n_cap,
-                alpha_deg=CP_MAP_ALPHA, Mach=MACH,
-                S_ref=S_cap, L_ref=L_cap, r_ref=r_cap, eD=eD0, eL=eL0, eM=eM0, gamma=GAMMA,
-            )
-        title_cp = f"Cp map - {CP_MAP_METHOD} - alpha {CP_MAP_ALPHA} deg - M{int(MACH)}"
-        save_cp_csv(
-            csv_dir / f"cp_faces_{CP_MAP_METHOD.lower()}_a{int(CP_MAP_ALPHA)}_M{int(MACH)}.csv",
-            c_cap, r_cp["cp"],
-        )
-        plot_cp_map(mesh_cap, geom_cap, r_cp["cp"], title=title_cp, plots_dir=plots_dir)
-
-    # ══════════════════════════════════════════════════════════════════════
-    # ESFERA
+    # ESFERA  (antes del bucle de cápsulas — datos disponibles para plots)
     # ══════════════════════════════════════════════════════════════════════
     print("\n" + "═"*60)
     print(f"Cargando esfera: {STL_SPHERE.name}")
@@ -886,6 +809,7 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     n_tri_sp = len(a_sp)
     print(f"  R={R_sp:.2f} mm  S_ref={S_sp:.2f} mm²  L_ref={L_sp:.2f} mm  triángulos={n_tri_sp}")
 
+    sphere_mach_rows = None
     if RUN_SPHERE_MACH_SWEEP:
         SPHERE_MACH_SWEEP = config.get("SPHERE_MACH_SWEEP", [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0])
         print(f"\n── Barrido Mach MNM esfera | M={SPHERE_MACH_SWEEP}  α=0°")
@@ -894,6 +818,140 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
             S_sp, L_sp, r_sp, eD0, eL0, eM0, GAMMA,
         )
         save_csv(csv_dir / "results_sphere_mnm_mach_sweep.csv", sphere_mach_rows, CSV_FIELDS_MNM)
+
+    # Caso MN esfera α=0 para el plot de validación
+    _r_sp_mn0 = solve_newton_case(
+        centers=c_sp, areas=a_sp, normals=n_sp, alpha_deg=0.0,
+        S_ref=S_sp, L_ref=L_sp, r_ref=r_sp, eD=eD0, eL=eL0, eM=eM0,
+    )
+    sphere_mn_cases = {"sphere_MN_a0_M8_CD": float(np.dot(_r_sp_mn0["CF_total"], eD0))}
+
+    # ══════════════════════════════════════════════════════════════════════
+    # BUCLE DE CÁPSULAS
+    # Cada cápsula genera sus outputs en csv/{stem}/ y Plots/{stem}/
+    # La cápsula primaria (primera) también alimenta los 9 casos y results.json
+    # ══════════════════════════════════════════════════════════════════════
+
+    # Datos de la cápsula primaria (inicializados aquí, asignados en la 1ª iteración)
+    c_cap = a_cap = n_cap = None
+    S_cap = L_cap = r_cap = None
+    n_tri_cap = 0
+    mesh_cap = geom_cap = None
+    rows_mn = rows_mnm = rows_mach = None
+    primary_cap_csv_dir   = csv_dir   / STL_CAPSULE.stem
+    primary_cap_plots_dir = plots_dir / STL_CAPSULE.stem
+
+    for _cap_idx, cap_stl in enumerate(capsule_list):
+        cap_stem      = cap_stl.stem
+        cap_csv_dir   = csv_dir   / cap_stem
+        cap_plots_dir = plots_dir / cap_stem
+        cap_csv_dir.mkdir(parents=True, exist_ok=True)
+        cap_plots_dir.mkdir(parents=True, exist_ok=True)
+
+        print("\n" + "═"*60)
+        print(f"Cápsula [{_cap_idx+1}/{len(capsule_list)}]: {cap_stl.name}")
+        print(f"  CSV  → {cap_csv_dir.relative_to(csv_dir.parent)}")
+        print(f"  Plots→ {cap_plots_dir.relative_to(plots_dir.parent)}")
+        print("═"*60)
+        _mesh = load_stl(cap_stl)
+        print_mesh_summary(_mesh)
+        _geom = compute_face_geometry(_mesh)
+        _c, _a, _n = _geom["centers"], _geom["areas"], _geom["normals"]
+        _S, _L, _r = get_capsule_refs(_mesh, _geom)
+        _n_tri = len(_a)
+        print(f"\n  S_ref={_S:.2f} mm²  L_ref={_L:.2f} mm  r_ref_y={_r[1]:.2f} mm")
+
+        if SHOW_GEOMETRY:
+            diag = np.linalg.norm(_mesh.bounds[1] - _mesh.bounds[0])
+            plot_geom(_geom, show_mesh=True, show_centers=True, show_normals=True,
+                      normal_scale=0.03*diag, color_by="area", title=f"Cápsula — {cap_stem}")
+
+        _rows_mn = _rows_mnm = _rows_mach = None
+        if RUN_MN_SWEEP:
+            print(f"\n── Barrido MN  | α={ALPHAS_DEG}°")
+            _rows_mn = run_mn_sweep(ALPHAS_DEG, _c, _a, _n, _S, _L, _r, eD0, eL0, eM0)
+            save_csv(cap_csv_dir / "results_mn.csv", _rows_mn, CSV_FIELDS_MN)
+
+        if RUN_MNM_SWEEP:
+            print(f"\n── Barrido MNM | α={ALPHAS_DEG}°  M={MACH}")
+            _rows_mnm = run_mnm_sweep(ALPHAS_DEG, MACH, _c, _a, _n, _S, _L, _r, eD0, eL0, eM0, GAMMA)
+            save_csv(cap_csv_dir / f"results_mnm_M{int(MACH)}.csv", _rows_mnm, CSV_FIELDS_MNM)
+
+        if RUN_MACH_SWEEP:
+            print(f"\n── Barrido Mach MNM | M={MACH_SWEEP}  α=0°")
+            _rows_mach = run_mach_sweep(MACH_SWEEP, 0.0, _c, _a, _n, _S, _L, _r, eD0, eL0, eM0, GAMMA)
+            save_csv(cap_csv_dir / "results_mnm_mach_sweep.csv", _rows_mach, CSV_FIELDS_MNM)
+
+        if ALPHA_TRIM_DEG is not None:
+            print(f"\n── Coeficientes en α_trim = {ALPHA_TRIM_DEG}°  |  {ALPHA_TRIM_METHOD}  M={MACH}")
+            eD_t, eL_t, eM_t = wind_axes(ALPHA_TRIM_DEG)
+            if ALPHA_TRIM_METHOD == "MN":
+                r_t = solve_newton_case(
+                    centers=_c, areas=_a, normals=_n, alpha_deg=ALPHA_TRIM_DEG,
+                    S_ref=_S, L_ref=_L, r_ref=_r, eD=eD_t, eL=eL_t, eM=eM_t,
+                )
+            else:
+                r_t = solve_modified_newton_case(
+                    centers=_c, areas=_a, normals=_n,
+                    alpha_deg=ALPHA_TRIM_DEG, Mach=MACH,
+                    S_ref=_S, L_ref=_L, r_ref=_r, eD=eD_t, eL=eL_t, eM=eM_t, gamma=GAMMA,
+                )
+            CD_t = float(r_t["CD"]); CL_t = float(r_t["CL"]); CM_t = float(r_t["CM"])
+            LD_t = CL_t / CD_t if CD_t != 0 else float("inf")
+            print(f"  CD={CD_t:.5f}  CL={CL_t:.5f}  CM={CM_t:.5f}  L/D={LD_t:.4f}")
+
+        if CP_MAP_ALPHA is not None:
+            print(f"\n── Mapa Cp | {CP_MAP_METHOD}  α={CP_MAP_ALPHA}°  M={MACH}")
+            if CP_MAP_METHOD == "MN":
+                r_cp = solve_newton_case(
+                    centers=_c, areas=_a, normals=_n, alpha_deg=CP_MAP_ALPHA,
+                    S_ref=_S, L_ref=_L, r_ref=_r, eD=eD0, eL=eL0, eM=eM0,
+                )
+            else:
+                r_cp = solve_modified_newton_case(
+                    centers=_c, areas=_a, normals=_n,
+                    alpha_deg=CP_MAP_ALPHA, Mach=MACH,
+                    S_ref=_S, L_ref=_L, r_ref=_r, eD=eD0, eL=eL0, eM=eM0, gamma=GAMMA,
+                )
+            title_cp = f"Cp map - {CP_MAP_METHOD} - alpha {CP_MAP_ALPHA} deg - M{int(MACH)}"
+            save_cp_csv(
+                cap_csv_dir / f"cp_faces_{CP_MAP_METHOD.lower()}_a{int(CP_MAP_ALPHA)}_M{int(MACH)}.csv",
+                _c, r_cp["cp"],
+            )
+            plot_cp_map(_mesh, _geom, r_cp["cp"], title=title_cp, plots_dir=cap_plots_dir)
+
+        # ── Plots por cápsula (capsule-specific + esfera ya disponible) ──────
+        generate_plots(
+            plots_dir=cap_plots_dir,
+            rows_mn=_rows_mn,
+            rows_mnm=_rows_mnm,
+            rows_mach=_rows_mach,
+            sphere_mach_rows=sphere_mach_rows,
+            sphere_mn_cases=sphere_mn_cases,
+            mesh_sweeps_mn=None,       # sensibilidad de malla solo para primaria
+            mesh_sweeps_mnm=None,
+            mesh_mach_sweeps_mnm=None,
+            mesh_tri_counts=None,
+        )
+
+        if config.get("RUN_WINDWARD_PLOTS", True):
+            generate_windward_plots(
+                centers=_c, areas=_a, normals=_n,
+                S_ref=_S, L_ref=_L, r_ref=_r,
+                alphas_deg=ALPHAS_DEG,
+                mach_sweep=MACH_SWEEP,
+                plots_dir=cap_plots_dir,
+                alpha_ref=CP_MAP_ALPHA if CP_MAP_ALPHA is not None else 20.0,
+                gamma=GAMMA,
+            )
+
+        # ── Almacenar datos de la cápsula primaria ───────────────────────────
+        if _cap_idx == 0:
+            c_cap, a_cap, n_cap = _c, _a, _n
+            S_cap, L_cap, r_cap = _S, _L, _r
+            n_tri_cap = _n_tri
+            mesh_cap, geom_cap = _mesh, _geom
+            rows_mn, rows_mnm, rows_mach = _rows_mn, _rows_mnm, _rows_mach
 
     if STL_COARSE is not None and STL_COARSE.exists():
         print(f"  Cargando malla gruesa: {STL_COARSE.name}")
@@ -1103,8 +1161,9 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
                   sphere_sref=S_sp * 1e-6, sphere_lref=L_sp * 1e-3)
     _check(results)
 
+    # cp_csv → subdir de la cápsula primaria (donde se guardó en el bucle)
     cp_csv = (
-        csv_dir / f"cp_faces_{CP_MAP_METHOD.lower()}_a{int(abs(CP_MAP_ALPHA))}_M{int(MACH)}.csv"
+        primary_cap_csv_dir / f"cp_faces_{CP_MAP_METHOD.lower()}_a{int(abs(CP_MAP_ALPHA))}_M{int(MACH)}.csv"
         if CP_MAP_ALPHA is not None else None
     )
     mesh_csv = csv_dir / "results_mesh_sensitivity.csv" if RUN_MESH_SENSITIVITY else None
@@ -1119,39 +1178,22 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
         out_path      = results_dir / "report_3d.html",
     )
 
-    # ── Gráficas analíticas ──────────────────────────────────────────────────
-    print("\n" + "═"*60)
-    print("Generando gráficas analíticas …")
-    print("═"*60)
-    sphere_mn_cases = {
-        "sphere_MN_a0_M8_CD": float(np.dot(r1["CF_total"], wind_axes(0.0)[0])),
-    }
-    generate_plots(
-        plots_dir=plots_dir,
-        rows_mn=rows_mn if RUN_MN_SWEEP else None,
-        rows_mnm=rows_mnm if RUN_MNM_SWEEP else None,
-        rows_mach=rows_mach if RUN_MACH_SWEEP else None,
-        sphere_mach_rows=sphere_mach_rows,
-        sphere_mn_cases=sphere_mn_cases,
-        mesh_sweeps_mn=mesh_sweeps_mn or None,
-        mesh_sweeps_mnm=mesh_sweeps_mnm or None,
-        mesh_mach_sweeps_mnm=mesh_mach_sweeps_mnm or None,
-        mesh_tri_counts=mesh_tri_counts or None,
-    )
-
-    # ── Validación esfera ────────────────────────────────────────────────────
-    if config.get("RUN_WINDWARD_PLOTS", True):
+    # ── Plots de sensibilidad de malla (solo cápsula primaria) ───────────────
+    if mesh_sweeps_mn or mesh_sweeps_mnm or mesh_mach_sweeps_mnm:
         print("\n" + "═"*60)
-        print("Generando gráficas barlovento/sotavento + CD vs α multi-Mach …")
+        print("Generando gráficas de sensibilidad de malla …")
         print("═"*60)
-        generate_windward_plots(
-            centers=c_cap, areas=a_cap, normals=n_cap,
-            S_ref=S_cap, L_ref=L_cap, r_ref=r_cap,
-            alphas_deg=ALPHAS_DEG,
-            mach_sweep=MACH_SWEEP,
-            plots_dir=plots_dir,
-            alpha_ref=CP_MAP_ALPHA if CP_MAP_ALPHA is not None else 20.0,
-            gamma=GAMMA,
+        generate_plots(
+            plots_dir=primary_cap_plots_dir,
+            rows_mn=None,
+            rows_mnm=None,
+            rows_mach=None,
+            sphere_mach_rows=None,
+            sphere_mn_cases=None,
+            mesh_sweeps_mn=mesh_sweeps_mn or None,
+            mesh_sweeps_mnm=mesh_sweeps_mnm or None,
+            mesh_mach_sweeps_mnm=mesh_mach_sweeps_mnm or None,
+            mesh_tri_counts=mesh_tri_counts or None,
         )
 
     if config.get("RUN_VALIDATION", False):

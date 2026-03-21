@@ -31,7 +31,12 @@ PLOTS_DIR.mkdir(exist_ok=True)
 config = {
 
     # ── Geometrías STL principales ──────────────────────────────────────────
-    "STL_CAPSULE": DATA_DIR / "Capsula" / "ARD_chillfine.stl",   # malla principal
+    # Para analizar más cápsulas, añade rutas a la lista — cada una genera
+    # sus propios CSVs y plots en csv/{nombre}/ y Plots/{nombre}/.
+    "CAPSULES": [
+        DATA_DIR / "Capsula" / "ARD_chillfine.stl",
+        # DATA_DIR / "Capsula_2" / "nueva_capsula.stl",   # ← descomentar para añadir
+    ],
     "STL_SPHERE":  DATA_DIR / "esfera"  / "esfera.stl",
 
     # ── Condiciones de flujo ────────────────────────────────────────────────
