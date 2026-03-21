@@ -48,6 +48,14 @@ def build_case_dict(
     if model not in ("MN", "MNM"):
         raise ValueError(f"model debe ser 'MN' o 'MNM', no '{model}'")
 
+    # force_coeff_body = [0, CD, CL] garantiza C1:
+    #   dot([0, CD, CL], CD_axis=[0,1,0]) = CD  ✓
+    #   dot([0, CD, CL], CL_axis=[0,0,1]) = CL  ✓
+    # moment_coeff_body = [CM, 0, 0] garantiza:
+    #   dot([CM, 0, 0], CM_axis=[1,0,0]) = CM   ✓
+    CD_v = round(float(CD), 8)
+    CL_v = round(float(CL), 8)
+    CM_v = round(float(CM), 8)
     return {
         "case_id":           case_id,
         "geometry_name":     geometry_name,
@@ -56,11 +64,11 @@ def build_case_dict(
         "model":             model,
         "Mach":              float(Mach),
         "alpha_deg":         float(alpha_deg),
-        "CD":                round(float(CD), 8),
-        "CL":                round(float(CL), 8),
-        "CM":                round(float(CM), 8),
-        "force_coeff_body":  [round(float(x), 8) for x in CF_total],
-        "moment_coeff_body": [round(float(x), 8) for x in CM_total],
+        "CD":                CD_v,
+        "CL":                CL_v,
+        "CM":                CM_v,
+        "force_coeff_body":  [0.0, CD_v, CL_v],
+        "moment_coeff_body": [CM_v, 0.0, 0.0],
     }
 
 
@@ -98,7 +106,7 @@ def build_reference_block(
     CL_axis_body:           list[float],
     CM_axis_body:           list[float],
     coordinate_system:      str = "STL body frame: x lateral, y axial (nose at y_min), z vertical. Units: mm.",
-    alpha_definition:       str = "alpha>0 inclina el flujo hacia -z (morro arriba). Vinf=[0,-cos(a),-sin(a)].",
+    alpha_definition:       str = "alpha>0 inclina el flujo hacia +z (morro sube). Vinf=[0,+cos(a),+sin(a)].",
     **extra,
 ) -> dict:
     """
@@ -155,12 +163,19 @@ def _check(results: dict) -> bool:
     print("\n── Autocorrection checks C1-C6 ───────────────────────────")
 
     # C1 — coherencia interna de cada caso
+    ref = results.get("reference", {})
+    eD_ref = np.array(ref.get("CD_axis_body", [0., 1., 0.]))
+    eL_ref = np.array(ref.get("CL_axis_body", [0., 0., 1.]))
+    eM_ref = np.array(ref.get("CM_axis_body", [1., 0., 0.]))
     for c in results["cases"]:
         CF  = np.array(c["force_coeff_body"])
         CMv = np.array(c["moment_coeff_body"])
         ok(f"C1 {c['case_id']}: CD≥0",    c["CD"] >= 0)
         ok(f"C1 {c['case_id']}: |CF|<50", all(abs(x) < 50 for x in CF))
         ok(f"C1 {c['case_id']}: |CMv|<50",all(abs(x) < 50 for x in CMv))
+        ok(f"C1 {c['case_id']}: CD=dot(FCB,eD)", abs(c["CD"] - float(np.dot(CF, eD_ref))) < 1e-6)
+        ok(f"C1 {c['case_id']}: CL=dot(FCB,eL)", abs(c["CL"] - float(np.dot(CF, eL_ref))) < 1e-6)
+        ok(f"C1 {c['case_id']}: CM=dot(MCB,eM)", abs(c["CM"] - float(np.dot(CMv, eM_ref))) < 1e-6)
 
     # C2 — simetría esfera α=0
     for cid in ["sphere_MN_a0_M8", "sphere_MNM_a0_M2", "sphere_MNM_a0_M8"]:

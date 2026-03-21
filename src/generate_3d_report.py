@@ -693,33 +693,25 @@ def save_report_plots(plots_dir: Path, data: dict) -> None:
     plots_dir = Path(plots_dir)
     plots_dir.mkdir(parents=True, exist_ok=True)
 
-    DARK = '#07090f'; GRID = '#1e2540'; TEXT = '#ccd6f6'; MUTED = '#4a5580'
-    C1 = '#3de8b0'; C2 = '#e85040'; C3 = '#7060e8'; C4 = '#e8a030'; C5 = '#e8d030'
+    # Colores formales (fondo blanco)
+    C1 = '#1a3a5c'; C2 = '#B71C1C'; C3 = '#4a4a9c'; C4 = '#c07000'; C5 = '#2e7d32'
+    GRID = '#dddddd'
 
     def _fig(title, xlabel, ylabel, fname):
         fig, ax = plt.subplots(figsize=(8, 5))
-        fig.patch.set_facecolor(DARK)
-        ax.set_facecolor('#0f1220')
-        ax.tick_params(colors=MUTED)
-        ax.xaxis.label.set_color(MUTED)
-        ax.yaxis.label.set_color(MUTED)
-        ax.title.set_color(TEXT)
-        for spine in ax.spines.values():
-            spine.set_edgecolor(GRID)
-        ax.grid(color=GRID, linewidth=0.7, linestyle='--', alpha=0.7)
+        fig.patch.set_facecolor('white')
+        ax.set_facecolor('white')
+        ax.grid(color=GRID, linewidth=0.8, linestyle='-', alpha=1.0)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_title(title)
         return fig, ax
 
     def _save(fig, fname):
-        leg = plt.gca().get_legend()
-        if leg:
-            leg.get_frame().set_facecolor('#0f1220')
-            leg.get_frame().set_edgecolor(GRID)
-            for t in leg.get_texts(): t.set_color(TEXT)
         plt.tight_layout()
-        plt.savefig(plots_dir / fname, dpi=150, bbox_inches='tight', facecolor=DARK)
+        plt.savefig(plots_dir / fname, dpi=150, bbox_inches='tight', facecolor='white')
         plt.close()
         print(f"  PNG -> {plots_dir / fname}")
 
@@ -745,7 +737,7 @@ def save_report_plots(plots_dir: Path, data: dict) -> None:
     fig, ax = _fig('Esfera — CL vs α  (M=8) — Validación simetría', 'α (°)', 'CL', '')
     if data['sph_mn_CL']: ax.plot(sph_a, data['sph_mn_CL'],  color=C1, lw=2, marker='o', ms=6, label='MN')
     if data['sph_mnm_CL']: ax.plot(sph_a, data['sph_mnm_CL'], color=C2, lw=2, marker='s', ms=6, label='MNM')
-    ax.axhline(0, color=MUTED, lw=1, linestyle=':')
+    ax.axhline(0, color='#aaaaaa', lw=1, linestyle=':')
     ax.legend(); _save(fig, '03_esfera_CL_vs_alpha_M8.png')
 
     # 4) cp,max vs M∞

@@ -868,8 +868,15 @@ def run_pipeline(config: dict, root: Path, csv_dir: Path, plots_dir: Path, resul
     capsule_list = config.get("CAPSULES") or [config["STL_CAPSULE"]]
     STL_CAPSULE  = capsule_list[0]          # cápsula principal para 9 casos y reports
     STL_SPHERE   = config["STL_SPHERE"]
-    STL_COARSE   = config.get("STL_COARSE")
-    STL_FINE     = config.get("STL_FINE")
+    # STL_COARSE/STL_FINE para los casos obligatorios de sensibilidad de malla.
+    # Si no están definidos explícitamente, se derivan de MESH_STLS:
+    #   coarse = primera malla de MESH_STLS que sea más gruesa que la principal
+    #   fine   = la cápsula principal (STL_CAPSULE)
+    _mesh_stls = config.get("MESH_STLS", [])
+    STL_COARSE = config.get("STL_COARSE") or (
+        next((p for p in _mesh_stls if p != STL_CAPSULE and p.exists()), None)
+    )
+    STL_FINE = config.get("STL_FINE") or STL_CAPSULE
 
     ALPHAS_DEG  = config["ALPHAS_DEG"]
     MACH        = config["MACH"]
