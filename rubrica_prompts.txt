@@ -1,0 +1,13 @@
+\begin{itemize}
+
+    \item \textbf{Las normales del STL apuntan hacia adentro y el $C_D$ da negativo:} En \texttt{compute\_face\_normals} se llama a \texttt{mesh.fix\_normals()} cuando \texttt{fix\_orientation=True}. Si el STL viene mal orientado, $\mu = \hat{n} \cdot (-\hat{V}_\infty)$ da negativo en barlovento, $c_p = 0$ en todas las caras y los coeficientes salen invertidos. La función \texttt{compute\_face\_geometry} ya activa esta corrección por defecto.
+
+    \item \textbf{¿Por qué $\mu = \hat{n} \cdot (-\hat{V}_\infty)$ y no $\hat{n} \cdot \hat{V}_\infty$? El signo me confunde:} $\hat{V}_\infty$ apunta en la dirección de avance del flujo. Para que $\mu > 0$ en las caras que \emph{reciben} el impacto, se necesita el vector fuente $\hat{s} = -\hat{V}_\infty$, que apunta de donde viene el aire. En barlovento $\hat{n}$ y $\hat{s}$ apuntan en sentidos similares ($\mu > 0$); en sotavento son opuestos ($\mu \leq 0$, cara en sombra, $c_p = 0$).
+
+    \item \textbf{El plot 3D aparece aplastado y la cápsula parece un disco:} Matplotlib no iguala los ejes 3D automáticamente. En \texttt{plot\_geom} se calcula \texttt{max\_range} como la mitad del mayor extent y se aplica simétricamente a los tres ejes con \texttt{ax.set\_xlim}, \texttt{set\_ylim} y \texttt{set\_zlim}. Si se construye un subplot propio fuera de \texttt{plot\_geom} hay que replicar ese bloque manualmente, pues \texttt{ax.set\_aspect(`equal')} no está soportado de forma fiable en ejes 3D de matplotlib.
+
+    \item \textbf{Quiero añadir una segunda cápsula al análisis. ¿Toco \texttt{runner.py}?:} No. El pipeline está diseñado para que toda la configuración viva en \texttt{main.py}. Basta con añadir la ruta del nuevo STL a la lista \texttt{CAPSULES} en el bloque de configuración. \texttt{runner.py} itera sobre esa lista y genera automáticamente subcarpetas propias en \texttt{csv/} y \texttt{Plots/} para cada cápsula.
+
+    \item \textbf{\texttt{ValueError: No se puede normalizar un vector nulo} al ejecutar el solver:} El error viene de \texttt{unit\_vector} cuando una cara de la malla tiene normal $\vec{0}$ (cara degenerada con área nula). No está relacionado con el ángulo de ataque: cualquier $\alpha$ puede dispararlo si la malla es defectuosa. Antes de correr el solver, usar \texttt{validate\_mesh()} para comprobar que \texttt{n\_degenerate\_faces} es cero; si no lo es, remallar o limpiar el STL.
+
+\end{itemize}

@@ -892,10 +892,10 @@ def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
     Stheta  = tnorm @ U_DIR                     # dot(U, outward_normal)
 
     # ── MN numérico sobre el STL ─────────────────────────────────────────────
-    ext   = verts.max(0) - verts.min(0)
-    S_ref = float(ext[0] * ext[2])
-    L_ref = float(ext[1])
-    r_ref = np.average(centers, axis=0, weights=areas)
+    R     = np.sqrt(areas.sum() / (4 * np.pi))
+    S_ref = float(np.pi * R**2)
+    L_ref = float(2 * R)
+    r_ref = np.zeros(3)
     # eD coherente con la convención del solver: flujo en +y
     flow_solver = np.array([0., +1., 0.])
     eM = np.array([1., 0., 0.])
@@ -925,9 +925,9 @@ def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
 
     # ── Plot 1: Cp vs cos(φ) ────────────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(x_matlab, cp_matlab[s_matlab],  s=8,  alpha=0.5,
+    ax.scatter(x_matlab, cp_matlab[s_matlab],  s=30, alpha=0.7,
                color="#9E9E9E", zorder=3, label="Dato MATLAB")
-    ax.scatter(x_model,  cp_model[s_model],    s=20, alpha=0.8,
+    ax.scatter(x_model,  cp_model[s_model],    s=8,  alpha=0.8,
                color="#B71C1C", zorder=5, label="MN (modelo)")
     ax.set_xlabel("cos φ  (ángulo de incidencia local)", fontsize=12)
     ax.set_ylabel("Cp", fontsize=12)
@@ -945,9 +945,9 @@ def run_validation(config: dict, plots_dir: Path, gamma: float = 1.4):
     phi_matlab = np.degrees(np.arccos(np.clip(x_matlab, 0, 1)))
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(phi_matlab, cp_matlab[s_matlab], s=8,  alpha=0.5,
+    ax.scatter(phi_matlab, cp_matlab[s_matlab], s=30, alpha=0.7,
                color="#9E9E9E", zorder=3, label="Dato MATLAB")
-    ax.scatter(phi_model,  cp_model[s_model],   s=20, alpha=0.8,
+    ax.scatter(phi_model,  cp_model[s_model],   s=8,  alpha=0.8,
                color="#B71C1C", zorder=5, label="MN (modelo)")
     ax.set_xlabel("φ (°) desde estancamiento", fontsize=12)
     ax.set_ylabel("Cp", fontsize=12)
